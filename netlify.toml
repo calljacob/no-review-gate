@@ -5,10 +5,29 @@
 [build.environment]
   NODE_VERSION = "18"
 
-[[plugins]]
-  package = "@netlify/plugin-functions"
-
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+
+# Redirect API routes to Netlify Functions
+[[redirects]]
+  from = "/api/campaigns"
+  to = "/.netlify/functions/campaigns"
+  status = 200
+
+[[redirects]]
+  from = "/api/campaign/*"
+  to = "/.netlify/functions/campaign"
+  status = 200
+
+[[redirects]]
+  from = "/api/reviews"
+  to = "/.netlify/functions/reviews"
+  status = 200
+
+# SPA fallback - redirect all other routes to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
