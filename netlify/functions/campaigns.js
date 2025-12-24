@@ -56,8 +56,8 @@ export const handler = async (event, context) => {
       }
 
       const [campaign] = await db`
-        INSERT INTO campaigns (name, google_link, yelp_link, created_at)
-        VALUES (${name}, ${googleLink || null}, ${yelpLink || null}, NOW())
+        INSERT INTO campaigns (name, google_link, yelp_link)
+        VALUES (${name}, ${googleLink || null}, ${yelpLink || null})
         RETURNING id, name, google_link, yelp_link, created_at
       `;
 
