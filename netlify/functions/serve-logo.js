@@ -72,7 +72,8 @@ export const handler = async (event, context) => {
     
     const contentType = getContentType(blobKey);
 
-    // Convert ArrayBuffer to base64 for response
+    // Convert ArrayBuffer to base64 for response (required by Netlify Functions)
+    // Note: While base64 adds ~33% overhead, it's required for binary data in serverless functions
     const buffer = Buffer.from(blob);
     const base64 = buffer.toString('base64');
 
@@ -81,6 +82,10 @@ export const handler = async (event, context) => {
       headers: {
         ...headers,
         'Content-Type': contentType,
+        // Add ETag for better caching
+        'ETag': `"${blobKey}"`,
+        // Vary header for content negotiation
+        'Vary': 'Accept-Encoding',
       },
       body: base64,
       isBase64Encoded: true,
