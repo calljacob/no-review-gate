@@ -318,6 +318,7 @@ const CampaignReviews = () => {
                                                         initialRating={review.rating}
                                                         readOnly={true}
                                                         primaryColor="#facc15"
+                                                        size="small"
                                                     />
                                                     <span className="text-sm text-slate-400">
                                                         ({review.rating}/5)

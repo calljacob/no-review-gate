@@ -1,9 +1,33 @@
 import React, { useState } from 'react';
 import { Star } from 'lucide-react';
 
-const StarRating = ({ onRate, initialRating = 0, readOnly = false, disabled = false, primaryColor }) => {
+const StarRating = ({ onRate, initialRating = 0, readOnly = false, disabled = false, primaryColor, size = 'default' }) => {
     const [hoverRating, setHoverRating] = useState(0);
     const [rating, setRating] = useState(initialRating);
+    
+    // Size configurations: 'small', 'default', 'large'
+    const sizeConfig = {
+        small: {
+            starSize: 14,
+            starClass: 'w-3.5 h-3.5',
+            gapClass: 'gap-1',
+            paddingClass: 'p-0'
+        },
+        default: {
+            starSize: 40,
+            starClass: 'w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12',
+            gapClass: 'gap-2 sm:gap-3',
+            paddingClass: 'p-2 sm:p-4'
+        },
+        large: {
+            starSize: 48,
+            starClass: 'w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16',
+            gapClass: 'gap-3 sm:gap-4',
+            paddingClass: 'p-3 sm:p-5'
+        }
+    };
+    
+    const config = sizeConfig[size] || sizeConfig.default;
 
     const handleMouseEnter = (index) => {
         if (!readOnly && !disabled) {
@@ -27,7 +51,7 @@ const StarRating = ({ onRate, initialRating = 0, readOnly = false, disabled = fa
     };
 
     return (
-        <div className="flex gap-2 sm:gap-3 justify-center p-2 sm:p-4">
+        <div className={`flex justify-center ${config.gapClass} ${config.paddingClass}`}>
             {[1, 2, 3, 4, 5].map((index) => {
                 const isFilled = (hoverRating || rating) >= index;
                 const isHovered = hoverRating >= index;
@@ -47,9 +71,9 @@ const StarRating = ({ onRate, initialRating = 0, readOnly = false, disabled = fa
                         aria-label={`Rate ${index} stars`}
                     >
                         <Star
-                            size={40}
+                            size={config.starSize}
                             className={`
-                w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12
+                ${config.starClass}
                 ${isFilled ? '' : 'fill-transparent text-slate-600'}
                 transition-all duration-300
               `}

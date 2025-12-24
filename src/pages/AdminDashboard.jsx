@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon, LogOut, KeyRound, User, Upload, X, Star } from 'lucide-react';
+import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon, LogOut, KeyRound, User, Upload, X, Star, Pencil } from 'lucide-react';
 
 // Helper function to convert API response (snake_case) to frontend format (camelCase)
 const toCamelCase = (apiCampaign) => ({
@@ -19,6 +19,7 @@ const AdminDashboard = () => {
     const navigate = useNavigate();
     const [campaigns, setCampaigns] = useState([]);
     const [showForm, setShowForm] = useState(false);
+    const [editingCampaignId, setEditingCampaignId] = useState(null);
     const [showPasswordForm, setShowPasswordForm] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -163,7 +164,7 @@ const AdminDashboard = () => {
             setSubmitting(true);
             setError(null);
             
-            // Upload logo first if there's a file
+            // Upload logo first if there's a new file
             let logoUrl = newCampaign.logoUrl;
             if (newCampaign.logoFile) {
                 setUploadingLogo(true);
@@ -177,8 +178,12 @@ const AdminDashboard = () => {
                 }
             }
             
-            const response = await fetch('/api/campaigns', {
-                method: 'POST',
+            const isEditing = editingCampaignId !== null;
+            const url = isEditing ? `/api/campaign?id=${editingCampaignId}` : '/api/campaigns';
+            const method = isEditing ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method,
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -195,12 +200,20 @@ const AdminDashboard = () => {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || `Failed to create campaign: ${response.statusText}`);
+                throw new Error(errorData.error || `Failed to ${isEditing ? 'update' : 'create'} campaign: ${response.statusText}`);
             }
 
-            const createdCampaign = await response.json();
-            // Convert API response to camelCase and add to campaigns list
-            setCampaigns([toCamelCase(createdCampaign), ...campaigns]);
+            const savedCampaign = await response.json();
+            const campaignCamelCase = toCamelCase(savedCampaign);
+
+            if (isEditing) {
+                // Update existing campaign in the list
+                setCampaigns(campaigns.map(c => c.id === editingCampaignId ? campaignCamelCase : c));
+                setEditingCampaignId(null);
+            } else {
+                // Add new campaign to the list
+                setCampaigns([campaignCamelCase, ...campaigns]);
+            }
             
             setNewCampaign({ 
                 name: '', 
@@ -215,11 +228,45 @@ const AdminDashboard = () => {
             });
             setShowForm(false);
         } catch (err) {
-            console.error('Error creating campaign:', err);
+            console.error(`Error ${editingCampaignId ? 'updating' : 'creating'} campaign:`, err);
             setError(err.message);
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const handleEdit = (campaign) => {
+        setEditingCampaignId(campaign.id);
+        setNewCampaign({
+            name: campaign.name,
+            googleLink: campaign.googleLink || '',
+            yelpLink: campaign.yelpLink || '',
+            logoUrl: campaign.logoUrl || '',
+            primaryColor: campaign.primaryColor || '#6366f1',
+            secondaryColor: campaign.secondaryColor || '#8b5cf6',
+            backgroundColor: campaign.backgroundColor || '#0f172a',
+            logoFile: null,
+            logoPreview: campaign.logoUrl ? `/api/serve-logo?key=${campaign.logoUrl}` : null
+        });
+        setShowForm(true);
+        setError(null);
+    };
+
+    const handleCancel = () => {
+        setShowForm(false);
+        setEditingCampaignId(null);
+        setNewCampaign({ 
+            name: '', 
+            googleLink: '', 
+            yelpLink: '',
+            logoUrl: '',
+            primaryColor: '#6366f1',
+            secondaryColor: '#8b5cf6',
+            backgroundColor: '#0f172a',
+            logoFile: null,
+            logoPreview: null
+        });
+        setError(null);
     };
 
     const handleDelete = async (id) => {
@@ -394,7 +441,9 @@ const AdminDashboard = () => {
                 {showForm && (
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in overflow-y-auto">
                         <div className="glass-panel p-4 sm:p-6 md:p-8 w-full max-w-2xl space-y-4 sm:space-y-5 md:space-y-6 bg-slate-900 border-slate-700 shadow-2xl my-4 sm:my-8 max-h-[90vh] overflow-y-auto">
-                            <h2 className="text-xl sm:text-2xl font-bold text-white">New Campaign</h2>
+                            <h2 className="text-xl sm:text-2xl font-bold text-white">
+                                {editingCampaignId ? 'Edit Campaign' : 'New Campaign'}
+                            </h2>
 
                             <form onSubmit={handleSave} className="space-y-4 sm:space-y-5">
                                 <div className="space-y-2">
@@ -531,20 +580,7 @@ const AdminDashboard = () => {
                                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-4">
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            setShowForm(false);
-                                            setNewCampaign({ 
-                                                name: '', 
-                                                googleLink: '', 
-                                                yelpLink: '',
-                                                logoUrl: '',
-                                                primaryColor: '#6366f1',
-                                                secondaryColor: '#8b5cf6',
-                                                backgroundColor: '#0f172a',
-                                                logoFile: null,
-                                                logoPreview: null
-                                            });
-                                        }}
+                                        onClick={handleCancel}
                                         className="flex-1 px-4 py-2.5 sm:py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors font-medium text-sm sm:text-base"
                                     >
                                         Cancel
@@ -554,7 +590,12 @@ const AdminDashboard = () => {
                                         className="flex-1 btn-primary text-sm sm:text-base py-2.5 sm:py-3"
                                         disabled={submitting || uploadingLogo}
                                     >
-                                        {uploadingLogo ? 'Uploading logo...' : submitting ? 'Creating...' : 'Create'}
+                                        {uploadingLogo 
+                                            ? 'Uploading logo...' 
+                                            : submitting 
+                                                ? (editingCampaignId ? 'Updating...' : 'Creating...') 
+                                                : (editingCampaignId ? 'Update' : 'Create')
+                                        }
                                     </button>
                                 </div>
                             </form>
@@ -687,6 +728,14 @@ const AdminDashboard = () => {
                                 >
                                     <Star size={18} />
                                     <span className="hidden sm:inline">Reviews</span>
+                                </button>
+
+                                <button
+                                    onClick={() => handleEdit(campaign)}
+                                    className="w-full sm:w-auto p-2.5 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300 rounded-lg transition-colors border border-transparent hover:border-blue-500/20"
+                                    title="Edit Campaign"
+                                >
+                                    <Pencil size={20} className="mx-auto" />
                                 </button>
 
                                 <button
