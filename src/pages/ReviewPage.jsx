@@ -13,6 +13,8 @@ const ReviewPage = () => {
     const [rating, setRating] = useState(0);
     const [step, setStep] = useState('rating'); // rating, feedback, links, done
     const [campaign, setCampaign] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         if (leadId && campaignId) {
@@ -28,20 +30,78 @@ const ReviewPage = () => {
         }
     }, [leadId, campaignId]);
 
-    const handleRate = (value) => {
-        setRating(value);
-        setTimeout(() => {
-            if (value >= 4) {
-                setStep('links');
-            } else {
-                setStep('feedback');
+    const submitReview = async (ratingValue, feedback = null) => {
+        if (!leadId || !campaignId) {
+            setError('Missing required information');
+            return false;
+        }
+
+        setIsSubmitting(true);
+        setError(null);
+
+        try {
+            const response = await fetch('/api/reviews', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    leadId,
+                    campaignId: parseInt(campaignId),
+                    rating: ratingValue,
+                    feedback: feedback || null,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to submit review');
             }
-        }, 400);
+
+            const review = await response.json();
+            console.log('Review submitted successfully:', review);
+            return true;
+        } catch (err) {
+            console.error('Error submitting review:', err);
+            setError(err.message || 'Failed to submit review. Please try again.');
+            return false;
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    const handleFeedbackSubmit = (feedback) => {
-        console.log('Feedback submitted:', { leadId, rating, feedback });
-        setStep('done');
+    const handleRate = async (value) => {
+        setRating(value);
+        
+        // For positive ratings (4-5 stars), submit immediately
+        // For negative ratings (1-3 stars), wait for feedback
+        if (value >= 4) {
+            const success = await submitReview(value);
+            if (success) {
+                setTimeout(() => {
+                    setStep('links');
+                }, 400);
+            } else {
+                // If submission failed, stay on rating step
+                setRating(0);
+            }
+        } else {
+            // For negative ratings, just move to feedback form
+            // We'll submit when feedback is provided
+            setTimeout(() => {
+                setStep('feedback');
+            }, 400);
+        }
+    };
+
+    const handleFeedbackSubmit = async (feedback) => {
+        // Submit the feedback (rating was already submitted, but we'll update it with feedback)
+        const success = await submitReview(rating, feedback);
+        
+        if (success) {
+            setStep('done');
+        }
+        // If it fails, error state is already set, user can try again
     };
 
     if (!leadId) {
@@ -99,17 +159,24 @@ const ReviewPage = () => {
                         </div>
                     )}
 
+                    {/* Error Message */}
+                    {error && (
+                        <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm animate-fade-in">
+                            {error}
+                        </div>
+                    )}
+
                     {/* Dynamic Content */}
                     <div className="min-h-[200px] flex items-center justify-center">
                         {step === 'rating' && (
                             <div className="w-full animate-slide-up">
-                                <StarRating onRate={handleRate} />
+                                <StarRating onRate={handleRate} disabled={isSubmitting} />
                             </div>
                         )}
 
                         {step === 'feedback' && (
                             <div className="w-full animate-slide-up space-y-8">
-                                <FeedbackForm onSubmit={handleFeedbackSubmit} />
+                                <FeedbackForm onSubmit={handleFeedbackSubmit} isSubmitting={isSubmitting} />
 
                                 <div className="relative">
                                     <div className="absolute inset-0 flex items-center">

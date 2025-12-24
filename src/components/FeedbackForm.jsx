@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
 import { Send } from 'lucide-react';
 
-const FeedbackForm = ({ onSubmit }) => {
+const FeedbackForm = ({ onSubmit, isSubmitting = false }) => {
     const [feedback, setFeedback] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        setIsSubmitting(true);
-        // Simulate API call
-        setTimeout(() => {
+        if (!isSubmitting && feedback.trim()) {
             onSubmit(feedback);
-            setIsSubmitting(false);
-        }, 1000);
+        }
     };
 
     return (

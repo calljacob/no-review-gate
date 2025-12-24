@@ -1,24 +1,24 @@
 import React, { useState } from 'react';
 import { Star } from 'lucide-react';
 
-const StarRating = ({ onRate, initialRating = 0, readOnly = false }) => {
+const StarRating = ({ onRate, initialRating = 0, readOnly = false, disabled = false }) => {
     const [hoverRating, setHoverRating] = useState(0);
     const [rating, setRating] = useState(initialRating);
 
     const handleMouseEnter = (index) => {
-        if (!readOnly) {
+        if (!readOnly && !disabled) {
             setHoverRating(index);
         }
     };
 
     const handleMouseLeave = () => {
-        if (!readOnly) {
+        if (!readOnly && !disabled) {
             setHoverRating(0);
         }
     };
 
     const handleClick = (index) => {
-        if (!readOnly) {
+        if (!readOnly && !disabled) {
             setRating(index);
             if (onRate) {
                 onRate(index);
@@ -36,9 +36,10 @@ const StarRating = ({ onRate, initialRating = 0, readOnly = false }) => {
                     <button
                         key={index}
                         type="button"
+                        disabled={disabled || readOnly}
                         className={`
               transition-all duration-300 transform focus:outline-none
-              ${readOnly ? 'cursor-default' : 'cursor-pointer hover:scale-125 active:scale-95'}
+              ${readOnly || disabled ? 'cursor-default opacity-50' : 'cursor-pointer hover:scale-125 active:scale-95'}
             `}
                         onMouseEnter={() => handleMouseEnter(index)}
                         onMouseLeave={handleMouseLeave}
