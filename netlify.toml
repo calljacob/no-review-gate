@@ -45,6 +45,16 @@
   to = "/.netlify/functions/change-password"
   status = 200
 
+[[redirects]]
+  from = "/api/upload-logo"
+  to = "/.netlify/functions/upload-logo"
+  status = 200
+
+[[redirects]]
+  from = "/api/serve-logo"
+  to = "/.netlify/functions/serve-logo"
+  status = 200
+
 # SPA fallback - redirect all other routes to index.html
 [[redirects]]
   from = "/*"

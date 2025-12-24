@@ -7,6 +7,10 @@ CREATE TABLE IF NOT EXISTS campaigns (
   name VARCHAR(255) NOT NULL,
   google_link TEXT,
   yelp_link TEXT,
+  logo_url TEXT,
+  primary_color VARCHAR(7),
+  secondary_color VARCHAR(7),
+  background_color VARCHAR(7),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

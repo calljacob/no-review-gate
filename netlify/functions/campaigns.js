@@ -31,7 +31,7 @@ export const handler = async (event, context) => {
     // GET - Fetch all campaigns
     if (event.httpMethod === 'GET') {
       const campaigns = await db`
-        SELECT id, name, google_link, yelp_link, created_at
+        SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
         FROM campaigns
         ORDER BY created_at DESC
       `;
@@ -45,7 +45,15 @@ export const handler = async (event, context) => {
 
     // POST - Create a new campaign
     if (event.httpMethod === 'POST') {
-      const { name, googleLink, yelpLink } = JSON.parse(event.body);
+      const { 
+        name, 
+        googleLink, 
+        yelpLink, 
+        logoUrl, 
+        primaryColor, 
+        secondaryColor, 
+        backgroundColor 
+      } = JSON.parse(event.body);
 
       if (!name) {
         return {
@@ -56,9 +64,17 @@ export const handler = async (event, context) => {
       }
 
       const [campaign] = await db`
-        INSERT INTO campaigns (name, google_link, yelp_link)
-        VALUES (${name}, ${googleLink || null}, ${yelpLink || null})
-        RETURNING id, name, google_link, yelp_link, created_at
+        INSERT INTO campaigns (name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color)
+        VALUES (
+          ${name}, 
+          ${googleLink || null}, 
+          ${yelpLink || null}, 
+          ${logoUrl || null}, 
+          ${primaryColor || null}, 
+          ${secondaryColor || null}, 
+          ${backgroundColor || null}
+        )
+        RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
       `;
 
       return {

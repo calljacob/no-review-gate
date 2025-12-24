@@ -50,7 +50,7 @@ export const handler = async (event, context) => {
     // GET - Fetch a specific campaign
     if (event.httpMethod === 'GET') {
       const [campaign] = await db`
-        SELECT id, name, google_link, yelp_link, created_at
+        SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
         FROM campaigns
         WHERE id = ${campaignId}
       `;
@@ -72,16 +72,28 @@ export const handler = async (event, context) => {
 
     // PUT - Update a campaign
     if (event.httpMethod === 'PUT') {
-      const { name, googleLink, yelpLink } = JSON.parse(event.body);
+      const { 
+        name, 
+        googleLink, 
+        yelpLink, 
+        logoUrl, 
+        primaryColor, 
+        secondaryColor, 
+        backgroundColor 
+      } = JSON.parse(event.body);
 
       const [updatedCampaign] = await db`
         UPDATE campaigns
         SET 
           name = ${name},
           google_link = ${googleLink || null},
-          yelp_link = ${yelpLink || null}
+          yelp_link = ${yelpLink || null},
+          logo_url = ${logoUrl !== undefined ? logoUrl : null},
+          primary_color = ${primaryColor || null},
+          secondary_color = ${secondaryColor || null},
+          background_color = ${backgroundColor || null}
         WHERE id = ${campaignId}
-        RETURNING id, name, google_link, yelp_link, created_at
+        RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
       `;
 
       if (!updatedCampaign) {

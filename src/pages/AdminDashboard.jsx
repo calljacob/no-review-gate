@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon, LogOut, KeyRound, User } from 'lucide-react';
+import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon, LogOut, KeyRound, User, Upload, X } from 'lucide-react';
 
 // Helper function to convert API response (snake_case) to frontend format (camelCase)
 const toCamelCase = (apiCampaign) => ({
@@ -8,6 +8,10 @@ const toCamelCase = (apiCampaign) => ({
     name: apiCampaign.name,
     googleLink: apiCampaign.google_link || '',
     yelpLink: apiCampaign.yelp_link || '',
+    logoUrl: apiCampaign.logo_url || '',
+    primaryColor: apiCampaign.primary_color || '',
+    secondaryColor: apiCampaign.secondary_color || '',
+    backgroundColor: apiCampaign.background_color || '',
     createdAt: apiCampaign.created_at
 });
 
@@ -25,8 +29,15 @@ const AdminDashboard = () => {
     const [newCampaign, setNewCampaign] = useState({
         name: '',
         googleLink: '',
-        yelpLink: ''
+        yelpLink: '',
+        logoUrl: '',
+        primaryColor: '#6366f1',
+        secondaryColor: '#8b5cf6',
+        backgroundColor: '#0f172a',
+        logoFile: null,
+        logoPreview: null
     });
+    const [uploadingLogo, setUploadingLogo] = useState(false);
     const [passwordData, setPasswordData] = useState({
         currentPassword: '',
         newPassword: '',
@@ -74,12 +85,97 @@ const AdminDashboard = () => {
         fetchCampaigns();
     }, []);
 
+    const handleLogoChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                setError('Please select an image file');
+                return;
+            }
+            
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                setError('Image size must be less than 5MB');
+                return;
+            }
+
+            // Create preview
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setNewCampaign({
+                    ...newCampaign,
+                    logoFile: file,
+                    logoPreview: reader.result
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleRemoveLogo = () => {
+        setNewCampaign({
+            ...newCampaign,
+            logoFile: null,
+            logoPreview: null,
+            logoUrl: ''
+        });
+    };
+
+    const uploadLogo = async (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                try {
+                    const base64 = reader.result;
+                    const response = await fetch('/api/upload-logo', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            base64,
+                            filename: file.name,
+                            contentType: file.type,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Failed to upload logo');
+                    }
+
+                    const data = await response.json();
+                    resolve(data.blobKey);
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    };
+
     const handleSave = async (e) => {
         e.preventDefault();
         
         try {
             setSubmitting(true);
             setError(null);
+            
+            // Upload logo first if there's a file
+            let logoUrl = newCampaign.logoUrl;
+            if (newCampaign.logoFile) {
+                setUploadingLogo(true);
+                try {
+                    const blobKey = await uploadLogo(newCampaign.logoFile);
+                    logoUrl = blobKey;
+                } catch (err) {
+                    throw new Error(`Failed to upload logo: ${err.message}`);
+                } finally {
+                    setUploadingLogo(false);
+                }
+            }
             
             const response = await fetch('/api/campaigns', {
                 method: 'POST',
@@ -90,6 +186,10 @@ const AdminDashboard = () => {
                     name: newCampaign.name,
                     googleLink: newCampaign.googleLink || null,
                     yelpLink: newCampaign.yelpLink || null,
+                    logoUrl: logoUrl || null,
+                    primaryColor: newCampaign.primaryColor || null,
+                    secondaryColor: newCampaign.secondaryColor || null,
+                    backgroundColor: newCampaign.backgroundColor || null,
                 }),
             });
 
@@ -102,7 +202,17 @@ const AdminDashboard = () => {
             // Convert API response to camelCase and add to campaigns list
             setCampaigns([toCamelCase(createdCampaign), ...campaigns]);
             
-            setNewCampaign({ name: '', googleLink: '', yelpLink: '' });
+            setNewCampaign({ 
+                name: '', 
+                googleLink: '', 
+                yelpLink: '',
+                logoUrl: '',
+                primaryColor: '#6366f1',
+                secondaryColor: '#8b5cf6',
+                backgroundColor: '#0f172a',
+                logoFile: null,
+                logoPreview: null
+            });
             setShowForm(false);
         } catch (err) {
             console.error('Error creating campaign:', err);
@@ -281,8 +391,8 @@ const AdminDashboard = () => {
 
                 {/* Add Campaign Modal */}
                 {showForm && (
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-                        <div className="glass-panel p-8 w-full max-w-md space-y-6 bg-slate-900 border-slate-700 shadow-2xl">
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in overflow-y-auto">
+                        <div className="glass-panel p-8 w-full max-w-2xl space-y-6 bg-slate-900 border-slate-700 shadow-2xl my-8">
                             <h2 className="text-2xl font-bold text-white">New Campaign</h2>
 
                             <form onSubmit={handleSave} className="space-y-5">
@@ -296,6 +406,103 @@ const AdminDashboard = () => {
                                         onChange={e => setNewCampaign({ ...newCampaign, name: e.target.value })}
                                         placeholder="e.g. Summer Sale Follow-up"
                                     />
+                                </div>
+
+                                {/* Logo Upload */}
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-slate-300">Logo (Optional)</label>
+                                    {newCampaign.logoPreview ? (
+                                        <div className="relative inline-block">
+                                            <img 
+                                                src={newCampaign.logoPreview} 
+                                                alt="Logo preview" 
+                                                className="h-20 object-contain rounded-lg border border-slate-700 bg-slate-800 p-2"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleRemoveLogo}
+                                                className="absolute -top-2 -right-2 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-700 rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-800 transition-colors">
+                                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                <Upload className="w-8 h-8 mb-2 text-slate-400" />
+                                                <p className="mb-2 text-sm text-slate-400">
+                                                    <span className="font-semibold">Click to upload</span> or drag and drop
+                                                </p>
+                                                <p className="text-xs text-slate-500">PNG, JPG, GIF up to 5MB</p>
+                                            </div>
+                                            <input 
+                                                type="file" 
+                                                className="hidden" 
+                                                accept="image/*"
+                                                onChange={handleLogoChange}
+                                            />
+                                        </label>
+                                    )}
+                                </div>
+
+                                {/* Color Pickers */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-slate-300">Primary Color</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="color"
+                                                className="w-16 h-10 rounded border border-slate-700 cursor-pointer"
+                                                value={newCampaign.primaryColor}
+                                                onChange={e => setNewCampaign({ ...newCampaign, primaryColor: e.target.value })}
+                                            />
+                                            <input
+                                                type="text"
+                                                className="flex-1 input-field"
+                                                value={newCampaign.primaryColor}
+                                                onChange={e => setNewCampaign({ ...newCampaign, primaryColor: e.target.value })}
+                                                placeholder="#6366f1"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-slate-300">Secondary Color</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="color"
+                                                className="w-16 h-10 rounded border border-slate-700 cursor-pointer"
+                                                value={newCampaign.secondaryColor}
+                                                onChange={e => setNewCampaign({ ...newCampaign, secondaryColor: e.target.value })}
+                                            />
+                                            <input
+                                                type="text"
+                                                className="flex-1 input-field"
+                                                value={newCampaign.secondaryColor}
+                                                onChange={e => setNewCampaign({ ...newCampaign, secondaryColor: e.target.value })}
+                                                placeholder="#8b5cf6"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-slate-300">Background Color</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="color"
+                                                className="w-16 h-10 rounded border border-slate-700 cursor-pointer"
+                                                value={newCampaign.backgroundColor}
+                                                onChange={e => setNewCampaign({ ...newCampaign, backgroundColor: e.target.value })}
+                                            />
+                                            <input
+                                                type="text"
+                                                className="flex-1 input-field"
+                                                value={newCampaign.backgroundColor}
+                                                onChange={e => setNewCampaign({ ...newCampaign, backgroundColor: e.target.value })}
+                                                placeholder="#0f172a"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -323,7 +530,20 @@ const AdminDashboard = () => {
                                 <div className="flex gap-3 pt-4">
                                     <button
                                         type="button"
-                                        onClick={() => setShowForm(false)}
+                                        onClick={() => {
+                                            setShowForm(false);
+                                            setNewCampaign({ 
+                                                name: '', 
+                                                googleLink: '', 
+                                                yelpLink: '',
+                                                logoUrl: '',
+                                                primaryColor: '#6366f1',
+                                                secondaryColor: '#8b5cf6',
+                                                backgroundColor: '#0f172a',
+                                                logoFile: null,
+                                                logoPreview: null
+                                            });
+                                        }}
                                         className="flex-1 px-4 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors font-medium"
                                     >
                                         Cancel
@@ -331,9 +551,9 @@ const AdminDashboard = () => {
                                     <button
                                         type="submit"
                                         className="flex-1 btn-primary"
-                                        disabled={submitting}
+                                        disabled={submitting || uploadingLogo}
                                     >
-                                        {submitting ? 'Creating...' : 'Create'}
+                                        {uploadingLogo ? 'Uploading logo...' : submitting ? 'Creating...' : 'Create'}
                                     </button>
                                 </div>
                             </form>

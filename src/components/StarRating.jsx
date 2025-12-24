@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Star } from 'lucide-react';
 
-const StarRating = ({ onRate, initialRating = 0, readOnly = false, disabled = false }) => {
+const StarRating = ({ onRate, initialRating = 0, readOnly = false, disabled = false, primaryColor }) => {
     const [hoverRating, setHoverRating] = useState(0);
     const [rating, setRating] = useState(initialRating);
 
@@ -49,10 +49,14 @@ const StarRating = ({ onRate, initialRating = 0, readOnly = false, disabled = fa
                         <Star
                             size={48}
                             className={`
-                ${isFilled ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent text-slate-600'}
-                ${isHovered && !readOnly ? 'drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]' : ''}
+                ${isFilled ? '' : 'fill-transparent text-slate-600'}
                 transition-all duration-300
               `}
+                            style={isFilled ? {
+                                fill: primaryColor || '#facc15',
+                                color: primaryColor || '#facc15',
+                                filter: isHovered && !readOnly ? `drop-shadow(0 0 10px ${primaryColor || '#facc15'}80)` : 'none'
+                            } : {}}
                             strokeWidth={1.5}
                         />
                     </button>
