@@ -16,7 +16,32 @@ Configure these in your Netlify dashboard:
 
 1. Open your Neon dashboard SQL editor
 2. Run the SQL script from `netlify/functions/setup-db.sql`
-3. This will create the necessary tables and indexes
+3. This will create the necessary tables and indexes (including the `users` table for authentication)
+
+## Authentication Setup
+
+After setting up the database schema, create an admin user:
+
+```bash
+npm run db:create-admin
+```
+
+This will create an admin user with:
+- Email: `alberto@calljacob.com`
+- Password: `123456`
+
+**Note:** Make sure to change the default password after first login for security.
+
+### Creating Additional Users
+
+To create additional admin users, you can modify the `scripts/create-admin-user.js` file with different credentials, or add them directly via SQL:
+
+```sql
+INSERT INTO users (email, password_hash) 
+VALUES ('user@example.com', '$2a$10$...hashed_password...');
+```
+
+Use bcrypt to hash passwords (10 salt rounds recommended).
 
 ## Available API Endpoints
 
@@ -51,6 +76,30 @@ Configure these in your Netlify dashboard:
   }
   ```
 
+### Authentication
+
+- `POST /api/auth/login` - Login with email and password
+  ```json
+  {
+    "email": "admin@example.com",
+    "password": "password123"
+  }
+  ```
+  Returns a JWT token stored in an HttpOnly cookie.
+
+- `POST /api/auth/logout` - Logout (clears authentication cookie)
+
+- `GET /api/auth/verify` - Verify current session token
+  Returns user information if authenticated.
+
+- `POST /api/change-password` - Change password (requires authentication)
+  ```json
+  {
+    "currentPassword": "oldpassword",
+    "newPassword": "newpassword"
+  }
+  ```
+
 ## Local Development
 
 For local development, you'll need to set environment variables:
@@ -74,9 +123,23 @@ The `netlify/functions/utils/db.js` file provides helper functions:
 - `getDb()` - Get a Neon database client
 - `query(sql, params)` - Execute a SQL query
 
+## Environment Variables for Authentication
+
+For production, set a secure JWT secret in Netlify:
+
+- `JWT_SECRET` - Secret key for signing JWT tokens (use a strong random string in production)
+
+Configure in Netlify dashboard:
+**Site settings > Environment variables**
+
+If not set, a default secret is used (not recommended for production).
+
 ## Notes
 
 - The Neon serverless driver automatically handles connection pooling
 - Use `NETLIFY_DATABASE_URL` (pooled) for serverless functions
 - All functions include CORS headers for frontend access
+- Authentication uses JWT tokens stored in HttpOnly cookies for security
+- The `/admin` route is protected and requires authentication
+- Users can change their password from the admin dashboard
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon, LogOut, KeyRound, User } from 'lucide-react';
 
 // Helper function to convert API response (snake_case) to frontend format (camelCase)
 const toCamelCase = (apiCampaign) => ({
@@ -11,19 +12,43 @@ const toCamelCase = (apiCampaign) => ({
 });
 
 const AdminDashboard = () => {
+    const navigate = useNavigate();
     const [campaigns, setCampaigns] = useState([]);
     const [showForm, setShowForm] = useState(false);
+    const [showPasswordForm, setShowPasswordForm] = useState(false);
+    const [showUserMenu, setShowUserMenu] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+    const [changingPassword, setChangingPassword] = useState(false);
+    const [user, setUser] = useState(null);
     const [newCampaign, setNewCampaign] = useState({
         name: '',
         googleLink: '',
         yelpLink: ''
     });
+    const [passwordData, setPasswordData] = useState({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+    });
 
-    // Fetch campaigns from API
+    // Fetch user info and campaigns
     useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const response = await fetch('/api/auth/verify', {
+                    credentials: 'include',
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setUser(data.user);
+                }
+            } catch (err) {
+                console.error('Error fetching user:', err);
+            }
+        };
+
         const fetchCampaigns = async () => {
             try {
                 setLoading(true);
@@ -45,6 +70,7 @@ const AdminDashboard = () => {
             }
         };
 
+        fetchUser();
         fetchCampaigns();
     }, []);
 
@@ -122,6 +148,66 @@ const AdminDashboard = () => {
         alert('Link copied to clipboard!');
     };
 
+    const handleLogout = async () => {
+        try {
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'include',
+            });
+            navigate('/login');
+        } catch (err) {
+            console.error('Logout error:', err);
+            // Still navigate to login even if logout fails
+            navigate('/login');
+        }
+    };
+
+    const handlePasswordChange = async (e) => {
+        e.preventDefault();
+        
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            setError('New passwords do not match');
+            return;
+        }
+
+        if (passwordData.newPassword.length < 6) {
+            setError('New password must be at least 6 characters long');
+            return;
+        }
+
+        try {
+            setChangingPassword(true);
+            setError(null);
+            
+            const response = await fetch('/api/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    currentPassword: passwordData.currentPassword,
+                    newPassword: passwordData.newPassword,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to change password');
+            }
+
+            alert('Password changed successfully!');
+            setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            setShowPasswordForm(false);
+        } catch (err) {
+            console.error('Error changing password:', err);
+            setError(err.message);
+        } finally {
+            setChangingPassword(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 p-6 md:p-12">
             <div className="max-w-6xl mx-auto space-y-8">
@@ -137,13 +223,53 @@ const AdminDashboard = () => {
                         </div>
                         <p className="text-slate-400 pl-[52px]">Manage your review campaigns and links</p>
                     </div>
-                    <button
-                        onClick={() => setShowForm(true)}
-                        className="btn-primary flex items-center gap-2 shadow-indigo-500/20"
-                    >
-                        <Plus size={20} />
-                        New Campaign
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setShowForm(true)}
+                            className="btn-primary flex items-center gap-2 shadow-indigo-500/20"
+                        >
+                            <Plus size={20} />
+                            New Campaign
+                        </button>
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowUserMenu(!showUserMenu)}
+                                className="p-2.5 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-300 hover:text-white transition-colors"
+                                title="User menu"
+                            >
+                                <User size={20} />
+                            </button>
+                            {showUserMenu && (
+                                <div className="absolute right-0 mt-2 w-56 glass-panel p-2 space-y-1 z-50">
+                                    {user && (
+                                        <div className="px-3 py-2 text-sm text-slate-400 border-b border-slate-700">
+                                            {user.email}
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            setShowPasswordForm(true);
+                                            setShowUserMenu(false);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded-lg transition-colors"
+                                    >
+                                        <KeyRound size={16} />
+                                        Change Password
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            handleLogout();
+                                            setShowUserMenu(false);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                    >
+                                        <LogOut size={16} />
+                                        Logout
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Error Message */}
@@ -208,6 +334,77 @@ const AdminDashboard = () => {
                                         disabled={submitting}
                                     >
                                         {submitting ? 'Creating...' : 'Create'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Change Password Modal */}
+                {showPasswordForm && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+                        <div className="glass-panel p-8 w-full max-w-md space-y-6 bg-slate-900 border-slate-700 shadow-2xl">
+                            <h2 className="text-2xl font-bold text-white">Change Password</h2>
+
+                            <form onSubmit={handlePasswordChange} className="space-y-5">
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-slate-300">Current Password</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        className="input-field"
+                                        value={passwordData.currentPassword}
+                                        onChange={e => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                                        placeholder="Enter current password"
+                                        autoComplete="current-password"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-slate-300">New Password</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        className="input-field"
+                                        value={passwordData.newPassword}
+                                        onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                        placeholder="Enter new password (min 6 characters)"
+                                        autoComplete="new-password"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-slate-300">Confirm New Password</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        className="input-field"
+                                        value={passwordData.confirmPassword}
+                                        onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                        placeholder="Confirm new password"
+                                        autoComplete="new-password"
+                                    />
+                                </div>
+
+                                <div className="flex gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowPasswordForm(false);
+                                            setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                                            setError(null);
+                                        }}
+                                        className="flex-1 px-4 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors font-medium"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 btn-primary"
+                                        disabled={changingPassword}
+                                    >
+                                        {changingPassword ? 'Changing...' : 'Change Password'}
                                     </button>
                                 </div>
                             </form>
@@ -291,9 +488,16 @@ const AdminDashboard = () => {
                             </button>
                         </div>
                     )}
-                </div>
+                    </div>
                 )}
             </div>
+            {/* Click outside to close user menu */}
+            {showUserMenu && (
+                <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowUserMenu(false)}
+                />
+            )}
         </div>
     );
 };

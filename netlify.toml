@@ -25,6 +25,26 @@
   to = "/.netlify/functions/reviews"
   status = 200
 
+[[redirects]]
+  from = "/api/auth/login"
+  to = "/.netlify/functions/auth?action=login"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/logout"
+  to = "/.netlify/functions/auth?action=logout"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/verify"
+  to = "/.netlify/functions/auth?action=verify"
+  status = 200
+
+[[redirects]]
+  from = "/api/change-password"
+  to = "/.netlify/functions/change-password"
+  status = 200
+
 # SPA fallback - redirect all other routes to index.html
 [[redirects]]
   from = "/*"

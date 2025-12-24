@@ -10,6 +10,15 @@ CREATE TABLE IF NOT EXISTS campaigns (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create users table for authentication
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create reviews table
 CREATE TABLE IF NOT EXISTS reviews (
   id SERIAL PRIMARY KEY,
@@ -21,6 +30,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 
 -- Create indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_reviews_campaign_id ON reviews(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_lead_id ON reviews(lead_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON reviews(created_at);
