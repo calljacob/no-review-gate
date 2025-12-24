@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import ReviewPage from './pages/ReviewPage';
 import AdminDashboard from './pages/AdminDashboard';
 import LoginPage from './pages/LoginPage';
+import CampaignReviews from './pages/CampaignReviews';
 import ProtectedRoute from './components/ProtectedRoute';
 import './styles/index.css';
 
@@ -17,6 +18,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/reviews" 
+          element={
+            <ProtectedRoute>
+              <CampaignReviews />
             </ProtectedRoute>
           } 
         />

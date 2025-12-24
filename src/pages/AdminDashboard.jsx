@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon, LogOut, KeyRound, User, Upload, X } from 'lucide-react';
+import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon, LogOut, KeyRound, User, Upload, X, Star } from 'lucide-react';
 
 // Helper function to convert API response (snake_case) to frontend format (camelCase)
 const toCamelCase = (apiCampaign) => ({
@@ -319,40 +319,41 @@ const AdminDashboard = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-950 p-6 md:p-12">
-            <div className="max-w-6xl mx-auto space-y-8">
+        <div className="min-h-screen bg-slate-950 p-3 sm:p-4 md:p-6 lg:p-8 xl:p-12">
+            <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 md:space-y-8">
 
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                     <div className="space-y-1">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-indigo-500/10 rounded-lg">
-                                <LayoutDashboard className="w-8 h-8 text-indigo-400" />
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="p-1.5 sm:p-2 bg-indigo-500/10 rounded-lg">
+                                <LayoutDashboard className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-indigo-400" />
                             </div>
-                            <h1 className="text-3xl font-bold text-white tracking-tight">Campaigns</h1>
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">Campaigns</h1>
                         </div>
-                        <p className="text-slate-400 pl-[52px]">Manage your review campaigns and links</p>
+                        <p className="text-slate-400 text-xs sm:text-sm pl-9 sm:pl-11 md:pl-[52px]">Manage your review campaigns and links</p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3">
                         <button
                             onClick={() => setShowForm(true)}
-                            className="btn-primary flex items-center gap-2 shadow-indigo-500/20"
+                            className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 shadow-indigo-500/20"
                         >
-                            <Plus size={20} />
-                            New Campaign
+                            <Plus size={16} className="sm:w-5 sm:h-5" />
+                            <span className="hidden sm:inline">New Campaign</span>
+                            <span className="sm:hidden">New</span>
                         </button>
                         <div className="relative">
                             <button
                                 onClick={() => setShowUserMenu(!showUserMenu)}
-                                className="p-2.5 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-300 hover:text-white transition-colors"
+                                className="p-2 sm:p-2.5 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-300 hover:text-white transition-colors"
                                 title="User menu"
                             >
-                                <User size={20} />
+                                <User size={18} className="sm:w-5 sm:h-5" />
                             </button>
                             {showUserMenu && (
-                                <div className="absolute right-0 mt-2 w-56 glass-panel p-2 space-y-1 z-50">
+                                <div className="absolute right-0 mt-2 w-48 sm:w-56 glass-panel p-2 space-y-1 z-50">
                                     {user && (
-                                        <div className="px-3 py-2 text-sm text-slate-400 border-b border-slate-700">
+                                        <div className="px-3 py-2 text-xs sm:text-sm text-slate-400 border-b border-slate-700 truncate">
                                             {user.email}
                                         </div>
                                     )}
@@ -361,9 +362,9 @@ const AdminDashboard = () => {
                                             setShowPasswordForm(true);
                                             setShowUserMenu(false);
                                         }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded-lg transition-colors"
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs sm:text-sm text-slate-300 hover:bg-slate-800 rounded-lg transition-colors"
                                     >
-                                        <KeyRound size={16} />
+                                        <KeyRound size={14} className="sm:w-4 sm:h-4" />
                                         Change Password
                                     </button>
                                     <button
@@ -371,9 +372,9 @@ const AdminDashboard = () => {
                                             handleLogout();
                                             setShowUserMenu(false);
                                         }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs sm:text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                                     >
-                                        <LogOut size={16} />
+                                        <LogOut size={14} className="sm:w-4 sm:h-4" />
                                         Logout
                                     </button>
                                 </div>
@@ -384,24 +385,24 @@ const AdminDashboard = () => {
 
                 {/* Error Message */}
                 {error && (
-                    <div className="glass-panel p-4 bg-red-500/10 border-red-500/30 text-red-400 rounded-xl">
-                        <p className="font-medium">Error: {error}</p>
+                    <div className="glass-panel p-3 sm:p-4 bg-red-500/10 border-red-500/30 text-red-400 rounded-xl">
+                        <p className="font-medium text-xs sm:text-sm md:text-base">Error: {error}</p>
                     </div>
                 )}
 
                 {/* Add Campaign Modal */}
                 {showForm && (
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in overflow-y-auto">
-                        <div className="glass-panel p-8 w-full max-w-2xl space-y-6 bg-slate-900 border-slate-700 shadow-2xl my-8">
-                            <h2 className="text-2xl font-bold text-white">New Campaign</h2>
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in overflow-y-auto">
+                        <div className="glass-panel p-4 sm:p-6 md:p-8 w-full max-w-2xl space-y-4 sm:space-y-5 md:space-y-6 bg-slate-900 border-slate-700 shadow-2xl my-4 sm:my-8 max-h-[90vh] overflow-y-auto">
+                            <h2 className="text-xl sm:text-2xl font-bold text-white">New Campaign</h2>
 
-                            <form onSubmit={handleSave} className="space-y-5">
+                            <form onSubmit={handleSave} className="space-y-4 sm:space-y-5">
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-slate-300">Campaign Name</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-slate-300">Campaign Name</label>
                                     <input
                                         type="text"
                                         required
-                                        className="input-field"
+                                        className="input-field text-sm sm:text-base"
                                         value={newCampaign.name}
                                         onChange={e => setNewCampaign({ ...newCampaign, name: e.target.value })}
                                         placeholder="e.g. Summer Sale Follow-up"
@@ -410,30 +411,30 @@ const AdminDashboard = () => {
 
                                 {/* Logo Upload */}
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-slate-300">Logo (Optional)</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-slate-300">Logo (Optional)</label>
                                     {newCampaign.logoPreview ? (
                                         <div className="relative inline-block">
                                             <img 
                                                 src={newCampaign.logoPreview} 
                                                 alt="Logo preview" 
-                                                className="h-20 object-contain rounded-lg border border-slate-700 bg-slate-800 p-2"
+                                                className="h-16 sm:h-20 object-contain rounded-lg border border-slate-700 bg-slate-800 p-2"
                                             />
                                             <button
                                                 type="button"
                                                 onClick={handleRemoveLogo}
                                                 className="absolute -top-2 -right-2 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
                                             >
-                                                <X size={16} />
+                                                <X size={14} className="sm:w-4 sm:h-4" />
                                             </button>
                                         </div>
                                     ) : (
-                                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-700 rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-800 transition-colors">
-                                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                <Upload className="w-8 h-8 mb-2 text-slate-400" />
-                                                <p className="mb-2 text-sm text-slate-400">
+                                        <label className="flex flex-col items-center justify-center w-full h-24 sm:h-32 border-2 border-dashed border-slate-700 rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-800 transition-colors">
+                                            <div className="flex flex-col items-center justify-center pt-4 pb-4 sm:pt-5 sm:pb-6 px-4">
+                                                <Upload className="w-6 h-6 sm:w-8 sm:h-8 mb-2 text-slate-400" />
+                                                <p className="mb-1 sm:mb-2 text-xs sm:text-sm text-slate-400 text-center">
                                                     <span className="font-semibold">Click to upload</span> or drag and drop
                                                 </p>
-                                                <p className="text-xs text-slate-500">PNG, JPG, GIF up to 5MB</p>
+                                                <p className="text-xs text-slate-500 text-center">PNG, JPG, GIF up to 5MB</p>
                                             </div>
                                             <input 
                                                 type="file" 
@@ -446,19 +447,19 @@ const AdminDashboard = () => {
                                 </div>
 
                                 {/* Color Pickers */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-slate-300">Primary Color</label>
+                                        <label className="block text-xs sm:text-sm font-medium text-slate-300">Primary Color</label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="color"
-                                                className="w-16 h-10 rounded border border-slate-700 cursor-pointer"
+                                                className="w-14 h-9 sm:w-16 sm:h-10 rounded border border-slate-700 cursor-pointer"
                                                 value={newCampaign.primaryColor}
                                                 onChange={e => setNewCampaign({ ...newCampaign, primaryColor: e.target.value })}
                                             />
                                             <input
                                                 type="text"
-                                                className="flex-1 input-field"
+                                                className="flex-1 input-field text-xs sm:text-sm"
                                                 value={newCampaign.primaryColor}
                                                 onChange={e => setNewCampaign({ ...newCampaign, primaryColor: e.target.value })}
                                                 placeholder="#6366f1"
@@ -467,17 +468,17 @@ const AdminDashboard = () => {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-slate-300">Secondary Color</label>
+                                        <label className="block text-xs sm:text-sm font-medium text-slate-300">Secondary Color</label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="color"
-                                                className="w-16 h-10 rounded border border-slate-700 cursor-pointer"
+                                                className="w-14 h-9 sm:w-16 sm:h-10 rounded border border-slate-700 cursor-pointer"
                                                 value={newCampaign.secondaryColor}
                                                 onChange={e => setNewCampaign({ ...newCampaign, secondaryColor: e.target.value })}
                                             />
                                             <input
                                                 type="text"
-                                                className="flex-1 input-field"
+                                                className="flex-1 input-field text-xs sm:text-sm"
                                                 value={newCampaign.secondaryColor}
                                                 onChange={e => setNewCampaign({ ...newCampaign, secondaryColor: e.target.value })}
                                                 placeholder="#8b5cf6"
@@ -485,18 +486,18 @@ const AdminDashboard = () => {
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-slate-300">Background Color</label>
+                                    <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                                        <label className="block text-xs sm:text-sm font-medium text-slate-300">Background Color</label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="color"
-                                                className="w-16 h-10 rounded border border-slate-700 cursor-pointer"
+                                                className="w-14 h-9 sm:w-16 sm:h-10 rounded border border-slate-700 cursor-pointer"
                                                 value={newCampaign.backgroundColor}
                                                 onChange={e => setNewCampaign({ ...newCampaign, backgroundColor: e.target.value })}
                                             />
                                             <input
                                                 type="text"
-                                                className="flex-1 input-field"
+                                                className="flex-1 input-field text-xs sm:text-sm"
                                                 value={newCampaign.backgroundColor}
                                                 onChange={e => setNewCampaign({ ...newCampaign, backgroundColor: e.target.value })}
                                                 placeholder="#0f172a"
@@ -506,10 +507,10 @@ const AdminDashboard = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-slate-300">Google Review Link</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-slate-300">Google Review Link</label>
                                     <input
                                         type="url"
-                                        className="input-field"
+                                        className="input-field text-sm sm:text-base"
                                         value={newCampaign.googleLink}
                                         onChange={e => setNewCampaign({ ...newCampaign, googleLink: e.target.value })}
                                         placeholder="https://g.page/..."
@@ -517,17 +518,17 @@ const AdminDashboard = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-slate-300">Yelp Review Link</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-slate-300">Yelp Review Link</label>
                                     <input
                                         type="url"
-                                        className="input-field"
+                                        className="input-field text-sm sm:text-base"
                                         value={newCampaign.yelpLink}
                                         onChange={e => setNewCampaign({ ...newCampaign, yelpLink: e.target.value })}
                                         placeholder="https://yelp.com/biz/..."
                                     />
                                 </div>
 
-                                <div className="flex gap-3 pt-4">
+                                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-4">
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -544,13 +545,13 @@ const AdminDashboard = () => {
                                                 logoPreview: null
                                             });
                                         }}
-                                        className="flex-1 px-4 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors font-medium"
+                                        className="flex-1 px-4 py-2.5 sm:py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors font-medium text-sm sm:text-base"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
-                                        className="flex-1 btn-primary"
+                                        className="flex-1 btn-primary text-sm sm:text-base py-2.5 sm:py-3"
                                         disabled={submitting || uploadingLogo}
                                     >
                                         {uploadingLogo ? 'Uploading logo...' : submitting ? 'Creating...' : 'Create'}
@@ -563,17 +564,17 @@ const AdminDashboard = () => {
 
                 {/* Change Password Modal */}
                 {showPasswordForm && (
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-                        <div className="glass-panel p-8 w-full max-w-md space-y-6 bg-slate-900 border-slate-700 shadow-2xl">
-                            <h2 className="text-2xl font-bold text-white">Change Password</h2>
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
+                        <div className="glass-panel p-4 sm:p-6 md:p-8 w-full max-w-md space-y-4 sm:space-y-5 md:space-y-6 bg-slate-900 border-slate-700 shadow-2xl">
+                            <h2 className="text-xl sm:text-2xl font-bold text-white">Change Password</h2>
 
-                            <form onSubmit={handlePasswordChange} className="space-y-5">
+                            <form onSubmit={handlePasswordChange} className="space-y-4 sm:space-y-5">
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-slate-300">Current Password</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-slate-300">Current Password</label>
                                     <input
                                         type="password"
                                         required
-                                        className="input-field"
+                                        className="input-field text-sm sm:text-base"
                                         value={passwordData.currentPassword}
                                         onChange={e => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
                                         placeholder="Enter current password"
@@ -582,11 +583,11 @@ const AdminDashboard = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-slate-300">New Password</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-slate-300">New Password</label>
                                     <input
                                         type="password"
                                         required
-                                        className="input-field"
+                                        className="input-field text-sm sm:text-base"
                                         value={passwordData.newPassword}
                                         onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                                         placeholder="Enter new password (min 6 characters)"
@@ -595,11 +596,11 @@ const AdminDashboard = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-slate-300">Confirm New Password</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-slate-300">Confirm New Password</label>
                                     <input
                                         type="password"
                                         required
-                                        className="input-field"
+                                        className="input-field text-sm sm:text-base"
                                         value={passwordData.confirmPassword}
                                         onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
                                         placeholder="Confirm new password"
@@ -607,7 +608,7 @@ const AdminDashboard = () => {
                                     />
                                 </div>
 
-                                <div className="flex gap-3 pt-4">
+                                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-4">
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -615,13 +616,13 @@ const AdminDashboard = () => {
                                             setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
                                             setError(null);
                                         }}
-                                        className="flex-1 px-4 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors font-medium"
+                                        className="flex-1 px-4 py-2.5 sm:py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors font-medium text-sm sm:text-base"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
-                                        className="flex-1 btn-primary"
+                                        className="flex-1 btn-primary text-sm sm:text-base py-2.5 sm:py-3"
                                         disabled={changingPassword}
                                     >
                                         {changingPassword ? 'Changing...' : 'Change Password'}
@@ -678,6 +679,15 @@ const AdminDashboard = () => {
                                         <Copy size={14} />
                                     </button>
                                 </div>
+
+                                <button
+                                    onClick={() => navigate(`/admin/reviews?campaignId=${campaign.id}&campaignName=${encodeURIComponent(campaign.name)}`)}
+                                    className="w-full sm:w-auto px-4 py-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 rounded-lg transition-colors border border-indigo-500/20 hover:border-indigo-500/30 flex items-center gap-2"
+                                    title="View Reviews"
+                                >
+                                    <Star size={18} />
+                                    <span className="hidden sm:inline">Reviews</span>
+                                </button>
 
                                 <button
                                     onClick={() => handleDelete(campaign.id)}

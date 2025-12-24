@@ -27,7 +27,7 @@ const StarRating = ({ onRate, initialRating = 0, readOnly = false, disabled = fa
     };
 
     return (
-        <div className="flex gap-3 justify-center p-4">
+        <div className="flex gap-2 sm:gap-3 justify-center p-2 sm:p-4">
             {[1, 2, 3, 4, 5].map((index) => {
                 const isFilled = (hoverRating || rating) >= index;
                 const isHovered = hoverRating >= index;
@@ -47,8 +47,9 @@ const StarRating = ({ onRate, initialRating = 0, readOnly = false, disabled = fa
                         aria-label={`Rate ${index} stars`}
                     >
                         <Star
-                            size={48}
+                            size={40}
                             className={`
+                w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12
                 ${isFilled ? '' : 'fill-transparent text-slate-600'}
                 transition-all duration-300
               `}
