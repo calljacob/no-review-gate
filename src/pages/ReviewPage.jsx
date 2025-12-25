@@ -321,7 +321,7 @@ const ReviewPage = () => {
                 {/* Footer */}
                 <div className="mt-4 sm:mt-6 md:mt-8 text-center">
                     <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
-                        Powered by ReviewCapture
+                        Designed & Developed by Alberto Martinez Jr for the Law Offices of Jacob Emrani
                     </p>
                 </div>
             </div>

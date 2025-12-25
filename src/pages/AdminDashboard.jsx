@@ -1132,6 +1132,7 @@ const AdminDashboard = () => {
                     onClick={() => setShowUserMenu(false)}
                 />
             )}
+            </div>
         </div>
     );
 };
