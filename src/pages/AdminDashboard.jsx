@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon, LogOut, KeyRound, User, Upload, X, Star, Pencil } from 'lucide-react';
+import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon, LogOut, KeyRound, User as UserIcon, Upload, X, Star, Pencil, Users, Shield, Mail } from 'lucide-react';
 
 // Helper function to convert API response (snake_case) to frontend format (camelCase)
 const toCamelCase = (apiCampaign) => ({
@@ -17,14 +17,19 @@ const toCamelCase = (apiCampaign) => ({
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState('campaigns'); // 'campaigns' or 'users'
     const [campaigns, setCampaigns] = useState([]);
+    const [users, setUsers] = useState([]);
     const [showForm, setShowForm] = useState(false);
+    const [showUserForm, setShowUserForm] = useState(false);
     const [editingCampaignId, setEditingCampaignId] = useState(null);
+    const [editingUserId, setEditingUserId] = useState(null);
     const [showPasswordForm, setShowPasswordForm] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+    const [submittingUser, setSubmittingUser] = useState(false);
     const [changingPassword, setChangingPassword] = useState(false);
     const [user, setUser] = useState(null);
     const [newCampaign, setNewCampaign] = useState({
@@ -43,6 +48,11 @@ const AdminDashboard = () => {
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
+    });
+    const [newUser, setNewUser] = useState({
+        email: '',
+        password: '',
+        role: 'user'
     });
 
     // Fetch user info and campaigns
@@ -63,7 +73,6 @@ const AdminDashboard = () => {
 
         const fetchCampaigns = async () => {
             try {
-                setLoading(true);
                 setError(null);
                 const response = await fetch('/api/campaigns');
                 
@@ -77,13 +86,35 @@ const AdminDashboard = () => {
             } catch (err) {
                 console.error('Error fetching campaigns:', err);
                 setError(err.message);
-            } finally {
-                setLoading(false);
             }
         };
 
-        fetchUser();
-        fetchCampaigns();
+        const fetchUsers = async () => {
+            try {
+                setError(null);
+                const response = await fetch('/api/users', {
+                    credentials: 'include',
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch users: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                setUsers(data);
+            } catch (err) {
+                console.error('Error fetching users:', err);
+                setError(err.message);
+            }
+        };
+
+        const fetchData = async () => {
+            setLoading(true);
+            await Promise.all([fetchUser(), fetchCampaigns(), fetchUsers()]);
+            setLoading(false);
+        };
+
+        fetchData();
     }, []);
 
     const handleLogoChange = (e) => {
@@ -365,38 +396,164 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleUserSave = async (e) => {
+        e.preventDefault();
+        
+        try {
+            setSubmittingUser(true);
+            setError(null);
+            
+            if (editingUserId) {
+                // Update existing user
+                const updateData = {
+                    email: newUser.email,
+                    role: newUser.role
+                };
+                if (newUser.password) {
+                    updateData.password = newUser.password;
+                }
+
+                const response = await fetch(`/api/users/${editingUserId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(updateData),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Failed to update user: ${response.statusText}`);
+                }
+
+                const updatedUser = await response.json();
+                setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+            } else {
+                // Create new user
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(newUser),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Failed to create user: ${response.statusText}`);
+                }
+
+                const createdUser = await response.json();
+                setUsers([createdUser, ...users]);
+            }
+            
+            setNewUser({ email: '', password: '', role: 'user' });
+            setShowUserForm(false);
+            setEditingUserId(null);
+        } catch (err) {
+            console.error('Error saving user:', err);
+            setError(err.message);
+        } finally {
+            setSubmittingUser(false);
+        }
+    };
+
+    const handleUserEdit = (userToEdit) => {
+        setEditingUserId(userToEdit.id);
+        setNewUser({
+            email: userToEdit.email,
+            password: '',
+            role: userToEdit.role
+        });
+        setShowUserForm(true);
+        setError(null);
+    };
+
+    const handleUserDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this user?')) {
+            return;
+        }
+
+        try {
+            setError(null);
+            const response = await fetch(`/api/users/${id}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `Failed to delete user: ${response.statusText}`);
+            }
+
+            setUsers(users.filter(u => u.id !== id));
+        } catch (err) {
+            console.error('Error deleting user:', err);
+            setError(err.message);
+            alert(`Failed to delete user: ${err.message}`);
+        }
+    };
+
+    const handleUserCancel = () => {
+        setShowUserForm(false);
+        setEditingUserId(null);
+        setNewUser({ email: '', password: '', role: 'user' });
+        setError(null);
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 p-3 sm:p-4 md:p-6 lg:p-8 xl:p-12">
             <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 md:space-y-8">
 
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2 sm:gap-3">
-                            <div className="p-1.5 sm:p-2 bg-indigo-500/10 rounded-lg">
-                                <LayoutDashboard className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-indigo-400" />
+                <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                                <div className="p-1.5 sm:p-2 bg-indigo-500/10 rounded-lg">
+                                    <LayoutDashboard className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-indigo-400" />
+                                </div>
+                                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">Admin Dashboard</h1>
                             </div>
-                            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white tracking-tight">Campaigns</h1>
+                            <p className="text-slate-400 text-xs sm:text-sm pl-9 sm:pl-11 md:pl-[52px]">
+                                {activeTab === 'campaigns' ? 'Manage your review campaigns and links' : 'Manage users and permissions'}
+                            </p>
                         </div>
-                        <p className="text-slate-400 text-xs sm:text-sm pl-9 sm:pl-11 md:pl-[52px]">Manage your review campaigns and links</p>
-                    </div>
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        <button
-                            onClick={() => setShowForm(true)}
-                            className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 shadow-indigo-500/20"
-                        >
-                            <Plus size={16} className="sm:w-5 sm:h-5" />
-                            <span className="hidden sm:inline">New Campaign</span>
-                            <span className="sm:hidden">New</span>
-                        </button>
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowUserMenu(!showUserMenu)}
-                                className="p-2 sm:p-2.5 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-300 hover:text-white transition-colors"
-                                title="User menu"
-                            >
-                                <User size={18} className="sm:w-5 sm:h-5" />
-                            </button>
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            {activeTab === 'campaigns' && (
+                                <button
+                                    onClick={() => setShowForm(true)}
+                                    className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 shadow-indigo-500/20"
+                                >
+                                    <Plus size={16} className="sm:w-5 sm:h-5" />
+                                    <span className="hidden sm:inline">New Campaign</span>
+                                    <span className="sm:hidden">New</span>
+                                </button>
+                            )}
+                            {activeTab === 'users' && (
+                                <button
+                                    onClick={() => {
+                                        setEditingUserId(null);
+                                        setNewUser({ email: '', password: '', role: 'user' });
+                                        setShowUserForm(true);
+                                    }}
+                                    className="btn-primary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 shadow-indigo-500/20"
+                                >
+                                    <Plus size={16} className="sm:w-5 sm:h-5" />
+                                    <span className="hidden sm:inline">New User</span>
+                                    <span className="sm:hidden">New</span>
+                                </button>
+                            )}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowUserMenu(!showUserMenu)}
+                                    className="p-2 sm:p-2.5 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-300 hover:text-white transition-colors"
+                                    title="User menu"
+                                >
+                                    <UserIcon size={18} className="sm:w-5 sm:h-5" />
+                                </button>
                             {showUserMenu && (
                                 <div className="absolute right-0 mt-2 w-48 sm:w-56 glass-panel p-2 space-y-1 z-50">
                                     {user && (
@@ -428,6 +585,36 @@ const AdminDashboard = () => {
                             )}
                         </div>
                     </div>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex gap-2 border-b border-slate-800">
+                    <button
+                        onClick={() => setActiveTab('campaigns')}
+                        className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                            activeTab === 'campaigns'
+                                ? 'border-indigo-500 text-indigo-400'
+                                : 'border-transparent text-slate-400 hover:text-slate-300'
+                        }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <LayoutDashboard size={18} />
+                            Campaigns
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('users')}
+                        className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                            activeTab === 'users'
+                                ? 'border-indigo-500 text-indigo-400'
+                                : 'border-transparent text-slate-400 hover:text-slate-300'
+                        }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Users size={18} />
+                            Users
+                        </div>
+                    </button>
                 </div>
 
                 {/* Error Message */}
@@ -674,17 +861,19 @@ const AdminDashboard = () => {
                     </div>
                 )}
 
-                {/* Campaigns List */}
-                {loading ? (
-                    <div className="text-center py-20 glass-panel border-dashed border-slate-800">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-800/50 text-slate-600 mb-4">
-                            <LayoutDashboard size={32} className="animate-pulse" />
-                        </div>
-                        <h3 className="text-xl font-semibold text-white mb-2">Loading campaigns...</h3>
-                    </div>
-                ) : (
-                <div className="grid gap-4">
-                    {campaigns.map(campaign => (
+                {/* Campaigns Tab Content */}
+                {activeTab === 'campaigns' && (
+                    <>
+                        {loading ? (
+                            <div className="text-center py-20 glass-panel border-dashed border-slate-800">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-800/50 text-slate-600 mb-4">
+                                    <LayoutDashboard size={32} className="animate-pulse" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-white mb-2">Loading campaigns...</h3>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4">
+                                {campaigns.map(campaign => (
                         <div key={campaign.id} className="glass-panel p-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 hover:border-indigo-500/30 transition-colors group">
                             <div className="space-y-2 flex-1">
                                 <h3 className="text-xl font-bold text-white group-hover:text-indigo-400 transition-colors">
@@ -767,6 +956,172 @@ const AdminDashboard = () => {
                             </button>
                         </div>
                     )}
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* Users Tab Content */}
+                {activeTab === 'users' && (
+                    <>
+                        {loading ? (
+                            <div className="text-center py-20 glass-panel border-dashed border-slate-800">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-800/50 text-slate-600 mb-4">
+                                    <Users size={32} className="animate-pulse" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-white mb-2">Loading users...</h3>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4">
+                                {users.map(userItem => (
+                                    <div key={userItem.id} className="glass-panel p-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 hover:border-indigo-500/30 transition-colors group">
+                                        <div className="space-y-2 flex-1">
+                                            <div className="flex items-center gap-3">
+                                                <h3 className="text-xl font-bold text-white group-hover:text-indigo-400 transition-colors">
+                                                    {userItem.email}
+                                                </h3>
+                                                <span className={`px-2 py-1 rounded-md text-xs font-medium ${
+                                                    userItem.role === 'admin' 
+                                                        ? 'bg-indigo-500/10 text-indigo-400' 
+                                                        : 'bg-slate-800 text-slate-400'
+                                                }`}>
+                                                    {userItem.role === 'admin' ? (
+                                                        <span className="flex items-center gap-1">
+                                                            <Shield size={12} />
+                                                            Admin
+                                                        </span>
+                                                    ) : (
+                                                        <span className="flex items-center gap-1">
+                                                            <UserIcon size={12} />
+                                                            User
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-4 text-sm text-slate-400">
+                                                <span className="flex items-center gap-1.5">
+                                                    <Mail size={14} />
+                                                    Created: {new Date(userItem.created_at).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                                            <button
+                                                onClick={() => handleUserEdit(userItem)}
+                                                className="w-full sm:w-auto px-4 py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 rounded-lg transition-colors border border-blue-500/20 hover:border-blue-500/30 flex items-center gap-2"
+                                                title="Edit User"
+                                            >
+                                                <Pencil size={18} />
+                                                <span className="hidden sm:inline">Edit</span>
+                                            </button>
+
+                                            <button
+                                                onClick={() => handleUserDelete(userItem.id)}
+                                                className="w-full sm:w-auto p-2.5 text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
+                                                title="Delete User"
+                                            >
+                                                <Trash2 size={20} className="mx-auto" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {users.length === 0 && (
+                                    <div className="text-center py-20 glass-panel border-dashed border-slate-800">
+                                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-800/50 text-slate-600 mb-4">
+                                            <Users size={32} />
+                                        </div>
+                                        <h3 className="text-xl font-semibold text-white mb-2">No users yet</h3>
+                                        <p className="text-slate-400 max-w-sm mx-auto mb-6">
+                                            Create a new user to grant access to the system.
+                                        </p>
+                                        <button
+                                            onClick={() => {
+                                                setEditingUserId(null);
+                                                setNewUser({ email: '', password: '', role: 'user' });
+                                                setShowUserForm(true);
+                                            }}
+                                            className="btn-primary inline-flex items-center gap-2"
+                                        >
+                                            <Plus size={20} />
+                                            Create User
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* Add/Edit User Modal */}
+                {showUserForm && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
+                        <div className="glass-panel p-4 sm:p-6 md:p-8 w-full max-w-md space-y-4 sm:space-y-5 md:space-y-6 bg-slate-900 border-slate-700 shadow-2xl">
+                            <h2 className="text-xl sm:text-2xl font-bold text-white">
+                                {editingUserId ? 'Edit User' : 'New User'}
+                            </h2>
+
+                            <form onSubmit={handleUserSave} className="space-y-4 sm:space-y-5">
+                                <div className="space-y-2">
+                                    <label className="block text-xs sm:text-sm font-medium text-slate-300">Email</label>
+                                    <input
+                                        type="email"
+                                        required
+                                        className="input-field text-sm sm:text-base"
+                                        value={newUser.email}
+                                        onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+                                        placeholder="user@example.com"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-xs sm:text-sm font-medium text-slate-300">
+                                        Password {editingUserId && '(leave blank to keep current)'}
+                                    </label>
+                                    <input
+                                        type="password"
+                                        required={!editingUserId}
+                                        className="input-field text-sm sm:text-base"
+                                        value={newUser.password}
+                                        onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                                        placeholder={editingUserId ? "New password (optional)" : "Password (min 6 characters)"}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="block text-xs sm:text-sm font-medium text-slate-300">Role</label>
+                                    <select
+                                        value={newUser.role}
+                                        onChange={e => setNewUser({ ...newUser, role: e.target.value })}
+                                        className="input-field text-sm sm:text-base"
+                                    >
+                                        <option value="user">User (Read-only access)</option>
+                                        <option value="admin">Admin (Full access)</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={handleUserCancel}
+                                        className="flex-1 px-4 py-2.5 sm:py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors font-medium text-sm sm:text-base"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 btn-primary text-sm sm:text-base py-2.5 sm:py-3"
+                                        disabled={submittingUser}
+                                    >
+                                        {submittingUser 
+                                            ? (editingUserId ? 'Updating...' : 'Creating...') 
+                                            : (editingUserId ? 'Update' : 'Create')
+                                        }
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 )}
             </div>

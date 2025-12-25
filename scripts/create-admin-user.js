@@ -1,11 +1,19 @@
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { dirname, join } from 'path';
+import dotenv from 'dotenv';
+import { existsSync } from 'fs';
 
 const { Client } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Load .env file if it exists
+const envPath = join(__dirname, '..', '.env');
+if (existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
 
 // Get connection string from environment variable
 const connectionString = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL;

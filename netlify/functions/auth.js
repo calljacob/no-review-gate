@@ -57,7 +57,7 @@ export const handler = async (event, context) => {
 
       // Find user by email
       const [user] = await db`
-        SELECT id, email, password_hash
+        SELECT id, email, password_hash, role
         FROM users
         WHERE email = ${email.toLowerCase().trim()}
       `;
@@ -82,7 +82,7 @@ export const handler = async (event, context) => {
 
       // Generate JWT token
       const token = jwt.sign(
-        { userId: user.id, email: user.email },
+        { userId: user.id, email: user.email, role: user.role },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN }
       );
@@ -98,7 +98,7 @@ export const handler = async (event, context) => {
         },
         body: JSON.stringify({
           success: true,
-          user: { id: user.id, email: user.email },
+          user: { id: user.id, email: user.email, role: user.role },
         }),
       };
     }
@@ -141,7 +141,7 @@ export const handler = async (event, context) => {
         
         // Get user from database
         const [user] = await db`
-          SELECT id, email
+          SELECT id, email, role
           FROM users
           WHERE id = ${decoded.userId}
         `;
@@ -159,7 +159,7 @@ export const handler = async (event, context) => {
           headers,
           body: JSON.stringify({
             authenticated: true,
-            user: { id: user.id, email: user.email },
+            user: { id: user.id, email: user.email, role: user.role },
           }),
         };
       } catch (error) {

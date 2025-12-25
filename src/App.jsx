@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import ReviewPage from './pages/ReviewPage';
 import AdminDashboard from './pages/AdminDashboard';
+import ReviewsOnlyDashboard from './pages/ReviewsOnlyDashboard';
 import LoginPage from './pages/LoginPage';
 import CampaignReviews from './pages/CampaignReviews';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -16,7 +17,7 @@ function App() {
         <Route 
           path="/admin" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requireAdmin={true}>
               <AdminDashboard />
             </ProtectedRoute>
           } 
@@ -24,15 +25,24 @@ function App() {
         <Route 
           path="/admin/reviews" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requireAdmin={true}>
               <CampaignReviews />
             </ProtectedRoute>
           } 
         />
-        <Route path="/" element={<Navigate to="/admin" replace />} />
+        <Route 
+          path="/reviews" 
+          element={
+            <ProtectedRoute>
+              <ReviewsOnlyDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route path="/" element={<Navigate to="/reviews" replace />} />
       </Routes>
     </Router>
   );
 }
 
 export default App;
+

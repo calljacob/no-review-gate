@@ -46,6 +46,16 @@
   status = 200
 
 [[redirects]]
+  from = "/api/users"
+  to = "/.netlify/functions/users"
+  status = 200
+
+[[redirects]]
+  from = "/api/users/*"
+  to = "/.netlify/functions/users"
+  status = 200
+
+[[redirects]]
   from = "/api/upload-logo"
   to = "/.netlify/functions/upload-logo"
   status = 200

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,9 +16,11 @@ const ProtectedRoute = ({ children }) => {
 
         const data = await response.json();
         setIsAuthenticated(data.authenticated === true);
+        setUserRole(data.user?.role || null);
       } catch (error) {
         console.error('Auth verification error:', error);
         setIsAuthenticated(false);
+        setUserRole(null);
       } finally {
         setLoading(false);
       }
@@ -39,7 +42,15 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (requireAdmin && userRole !== 'admin') {
+    return <Navigate to="/reviews" replace />;
+  }
+
+  return children;
 };
 
 export default ProtectedRoute;
