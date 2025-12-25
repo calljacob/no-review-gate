@@ -97,11 +97,21 @@ const AdminDashboard = () => {
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch users: ${response.statusText}`);
+                    // Try to get the actual error message from the response
+                    let errorMessage = `Failed to fetch users: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.error) {
+                            errorMessage = `Failed to fetch users: ${errorData.error}`;
+                        }
+                    } catch (e) {
+                        // If response isn't JSON, use the status text
+                    }
+                    throw new Error(errorMessage);
                 }
                 
                 const data = await response.json();
-                setUsers(data);
+                setUsers(data || []);
             } catch (err) {
                 console.error('Error fetching users:', err);
                 setError(err.message);
