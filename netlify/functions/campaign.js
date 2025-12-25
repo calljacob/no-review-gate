@@ -155,13 +155,16 @@ export const handler = async (event, context) => {
         }
       }
 
-      // Validate Google Place ID (if provided, must be non-empty string)
-      if (googleLink !== undefined && googleLink !== null && googleLink !== '' && typeof googleLink !== 'string') {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'Google Place ID must be a valid string' }),
-        };
+      // Validate Google Place ID (if provided, must be a string)
+      if (googleLink !== undefined && googleLink !== null) {
+        if (typeof googleLink !== 'string') {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Google Place ID must be a valid string' }),
+          };
+        }
+        // Allow empty string (it will be converted to null)
       }
       if (yelpLink && !isValidUrl(yelpLink)) {
         return {

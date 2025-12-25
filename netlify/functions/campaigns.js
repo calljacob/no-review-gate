@@ -59,17 +59,26 @@ export const handler = async (event, context) => {
 
     // GET - Fetch all campaigns (accessible to all authenticated users)
     if (event.httpMethod === 'GET') {
-      const campaigns = await db`
-        SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
-        FROM campaigns
-        ORDER BY created_at DESC
-      `;
+      try {
+        const campaigns = await db`
+          SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
+          FROM campaigns
+          ORDER BY created_at DESC
+        `;
 
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify(campaigns),
-      };
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(campaigns),
+        };
+      } catch (dbError) {
+        console.error('Error fetching campaigns from database:', dbError);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'Failed to fetch campaigns', message: dbError.message }),
+        };
+      }
     }
 
     // POST - Create a new campaign (admin only)
@@ -122,13 +131,16 @@ export const handler = async (event, context) => {
         };
       }
 
-      // Validate Google Place ID (if provided, must be non-empty string)
-      if (googleLink !== undefined && googleLink !== null && googleLink !== '' && typeof googleLink !== 'string') {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'Google Place ID must be a valid string' }),
-        };
+      // Validate Google Place ID (if provided, must be a string)
+      if (googleLink !== undefined && googleLink !== null) {
+        if (typeof googleLink !== 'string') {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Google Place ID must be a valid string' }),
+          };
+        }
+        // Allow empty string (it will be converted to null)
       }
       if (yelpLink && !isValidUrl(yelpLink)) {
         return {
