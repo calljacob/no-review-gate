@@ -1,8 +1,12 @@
 import { getDb } from './utils/db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { getCorsHeaders, validatePassword, safeJsonParse } from './utils/security.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'your-secret-key-change-in-production') {
+  throw new Error('JWT_SECRET environment variable must be set to a secure value in production');
+}
 
 /**
  * Netlify Serverless Function
@@ -12,14 +16,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
  * Requires: currentPassword, newPassword
  */
 export const handler = async (event, context) => {
-  // Enable CORS
-  const headers = {
-    'Access-Control-Allow-Origin': event.headers.origin || '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Credentials': 'true',
-    'Content-Type': 'application/json',
-  };
+  // Get CORS headers with proper origin validation
+  const headers = getCorsHeaders(event);
 
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -59,7 +57,17 @@ export const handler = async (event, context) => {
 
     // POST /api/change-password
     if (event.httpMethod === 'POST') {
-      const { currentPassword, newPassword } = JSON.parse(event.body);
+      // Safely parse JSON
+      const parseResult = safeJsonParse(event.body);
+      if (!parseResult.success) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: parseResult.error }),
+        };
+      }
+
+      const { currentPassword, newPassword } = parseResult.data;
 
       if (!currentPassword || !newPassword) {
         return {
@@ -69,11 +77,13 @@ export const handler = async (event, context) => {
         };
       }
 
-      if (newPassword.length < 6) {
+      // Validate new password strength
+      const passwordValidation = validatePassword(newPassword);
+      if (!passwordValidation.valid) {
         return {
           statusCode: 400,
           headers,
-          body: JSON.stringify({ error: 'New password must be at least 6 characters long' }),
+          body: JSON.stringify({ error: passwordValidation.error }),
         };
       }
 

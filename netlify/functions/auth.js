@@ -1,8 +1,12 @@
 import { getDb } from './utils/db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { getCorsHeaders, isValidEmail, safeJsonParse } from './utils/security.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'your-secret-key-change-in-production') {
+  throw new Error('JWT_SECRET environment variable must be set to a secure value in production');
+}
 const JWT_EXPIRES_IN = '7d';
 
 /**
@@ -14,14 +18,8 @@ const JWT_EXPIRES_IN = '7d';
  * GET /api/auth/verify - Verify current session token
  */
 export const handler = async (event, context) => {
-  // Enable CORS
-  const headers = {
-    'Access-Control-Allow-Origin': event.headers.origin || '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Credentials': 'true',
-    'Content-Type': 'application/json',
-  };
+  // Get CORS headers with proper origin validation
+  const headers = getCorsHeaders(event);
 
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -45,13 +43,32 @@ export const handler = async (event, context) => {
 
     // POST /api/auth/login
     if (event.httpMethod === 'POST' && action === 'login') {
-      const { email, password } = JSON.parse(event.body);
+      // Safely parse JSON
+      const parseResult = safeJsonParse(event.body);
+      if (!parseResult.success) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: parseResult.error }),
+        };
+      }
+
+      const { email, password } = parseResult.data;
 
       if (!email || !password) {
         return {
           statusCode: 400,
           headers,
           body: JSON.stringify({ error: 'Email and password are required' }),
+        };
+      }
+
+      // Validate email format
+      if (!isValidEmail(email)) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Invalid email format' }),
         };
       }
 

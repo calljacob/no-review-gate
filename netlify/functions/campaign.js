@@ -1,7 +1,11 @@
 import { getDb } from './utils/db.js';
 import jwt from 'jsonwebtoken';
+import { getCorsHeaders, isValidUrl, safeJsonParse, validateTextLength } from './utils/security.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'your-secret-key-change-in-production') {
+  throw new Error('JWT_SECRET environment variable must be set to a secure value in production');
+}
 
 /**
  * Helper function to verify admin authentication
@@ -39,13 +43,8 @@ async function verifyAdmin(event) {
  * DELETE: /api/campaign/:id - Delete a campaign (admin only)
  */
 export const handler = async (event, context) => {
-  const headers = {
-    'Access-Control-Allow-Origin': event.headers.origin || '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Credentials': 'true',
-    'Content-Type': 'application/json',
-  };
+  // Get CORS headers with proper origin validation
+  const headers = getCorsHeaders(event);
 
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -70,6 +69,7 @@ export const handler = async (event, context) => {
       }
     }
     
+    // Validate campaign ID
     if (!campaignId) {
       return {
         statusCode: 400,
@@ -78,12 +78,21 @@ export const handler = async (event, context) => {
       };
     }
 
+    const campaignIdInt = parseInt(campaignId, 10);
+    if (isNaN(campaignIdInt) || campaignIdInt <= 0) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Invalid campaign ID' }),
+      };
+    }
+
     // GET - Fetch a specific campaign
     if (event.httpMethod === 'GET') {
       const [campaign] = await db`
         SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
         FROM campaigns
-        WHERE id = ${campaignId}
+        WHERE id = ${campaignIdInt}
       `;
 
       if (!campaign) {
@@ -113,6 +122,16 @@ export const handler = async (event, context) => {
         };
       }
 
+      // Safely parse JSON
+      const parseResult = safeJsonParse(event.body);
+      if (!parseResult.success) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: parseResult.error }),
+        };
+      }
+
       const { 
         name, 
         googleLink, 
@@ -121,19 +140,46 @@ export const handler = async (event, context) => {
         primaryColor, 
         secondaryColor, 
         backgroundColor 
-      } = JSON.parse(event.body);
+      } = parseResult.data;
+
+      // Validate inputs
+      if (name !== undefined) {
+        const nameValidation = validateTextLength(name, 255, 'Campaign name');
+        if (!nameValidation.valid) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: nameValidation.error }),
+          };
+        }
+      }
+
+      if (googleLink && !isValidUrl(googleLink)) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Invalid Google link URL format' }),
+        };
+      }
+      if (yelpLink && !isValidUrl(yelpLink)) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Invalid Yelp link URL format' }),
+        };
+      }
 
       const [updatedCampaign] = await db`
         UPDATE campaigns
         SET 
-          name = ${name},
+          name = ${name !== undefined ? name : null},
           google_link = ${googleLink || null},
           yelp_link = ${yelpLink || null},
           logo_url = ${logoUrl !== undefined ? logoUrl : null},
           primary_color = ${primaryColor || null},
           secondary_color = ${secondaryColor || null},
           background_color = ${backgroundColor || null}
-        WHERE id = ${campaignId}
+        WHERE id = ${campaignIdInt}
         RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
       `;
 
@@ -166,7 +212,7 @@ export const handler = async (event, context) => {
 
       const [deletedCampaign] = await db`
         DELETE FROM campaigns
-        WHERE id = ${campaignId}
+        WHERE id = ${campaignIdInt}
         RETURNING id
       `;
 

@@ -1,8 +1,12 @@
 import { getDb } from './utils/db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { getCorsHeaders, isValidEmail, validatePassword, safeJsonParse } from './utils/security.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'your-secret-key-change-in-production') {
+  throw new Error('JWT_SECRET environment variable must be set to a secure value in production');
+}
 
 /**
  * Helper function to verify admin authentication
@@ -42,14 +46,8 @@ async function verifyAdmin(event) {
  * DELETE /api/users/:id - Delete a user
  */
 export const handler = async (event, context) => {
-  // Enable CORS
-  const headers = {
-    'Access-Control-Allow-Origin': event.headers.origin || '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Credentials': 'true',
-    'Content-Type': 'application/json',
-  };
+  // Get CORS headers with proper origin validation
+  const headers = getCorsHeaders(event);
 
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -106,13 +104,32 @@ export const handler = async (event, context) => {
 
     // POST /api/users - Create a new user
     if (event.httpMethod === 'POST') {
-      const { email, password, role = 'user' } = JSON.parse(event.body);
+      // Safely parse JSON
+      const parseResult = safeJsonParse(event.body);
+      if (!parseResult.success) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: parseResult.error }),
+        };
+      }
+
+      const { email, password, role = 'user' } = parseResult.data;
 
       if (!email || !password) {
         return {
           statusCode: 400,
           headers,
           body: JSON.stringify({ error: 'Email and password are required' }),
+        };
+      }
+
+      // Validate email format
+      if (!isValidEmail(email)) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Invalid email format' }),
         };
       }
 
@@ -124,11 +141,13 @@ export const handler = async (event, context) => {
         };
       }
 
-      if (password.length < 6) {
+      // Validate password strength
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
         return {
           statusCode: 400,
           headers,
-          body: JSON.stringify({ error: 'Password must be at least 6 characters long' }),
+          body: JSON.stringify({ error: passwordValidation.error }),
         };
       }
 
@@ -165,9 +184,26 @@ export const handler = async (event, context) => {
 
     // PUT /api/users/:id - Update a user
     if (event.httpMethod === 'PUT' && userId) {
-      const body = JSON.parse(event.body);
-      const { email, role, password } = body;
-      const userIdInt = parseInt(userId);
+      // Safely parse JSON
+      const parseResult = safeJsonParse(event.body);
+      if (!parseResult.success) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: parseResult.error }),
+        };
+      }
+
+      const { email, role, password } = parseResult.data;
+      const userIdInt = parseInt(userId, 10);
+      
+      if (isNaN(userIdInt) || userIdInt <= 0) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Invalid user ID' }),
+        };
+      }
 
       // Get current user
       const [currentUser] = await db`
@@ -184,6 +220,15 @@ export const handler = async (event, context) => {
 
       // Check email if provided
       if (email !== undefined && email !== currentUser.email) {
+        // Validate email format
+        if (!isValidEmail(email)) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Invalid email format' }),
+          };
+        }
+        
         const [existing] = await db`
           SELECT id FROM users WHERE email = ${email.toLowerCase().trim()} AND id != ${userIdInt}
         `;
@@ -208,12 +253,15 @@ export const handler = async (event, context) => {
       }
 
       // Validate password if provided
-      if (password !== undefined && password.length < 6) {
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({ error: 'Password must be at least 6 characters long' }),
-        };
+      if (password !== undefined) {
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.valid) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: passwordValidation.error }),
+          };
+        }
       }
 
       // Build update - use COALESCE to only update if value is provided
@@ -246,7 +294,15 @@ export const handler = async (event, context) => {
 
     // DELETE /api/users/:id - Delete a user
     if (event.httpMethod === 'DELETE' && userId) {
-      const userIdInt = parseInt(userId);
+      const userIdInt = parseInt(userId, 10);
+      
+      if (isNaN(userIdInt) || userIdInt <= 0) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Invalid user ID' }),
+        };
+      }
 
       // Prevent deleting yourself
       if (userIdInt === auth.userId) {

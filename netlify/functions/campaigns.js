@@ -1,7 +1,11 @@
 import { getDb } from './utils/db.js';
 import jwt from 'jsonwebtoken';
+import { getCorsHeaders, isValidUrl, safeJsonParse, validateTextLength } from './utils/security.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'your-secret-key-change-in-production') {
+  throw new Error('JWT_SECRET environment variable must be set to a secure value in production');
+}
 
 /**
  * Helper function to verify admin authentication
@@ -38,14 +42,8 @@ async function verifyAdmin(event) {
  * POST: /api/campaigns - Create a new campaign (admin only)
  */
 export const handler = async (event, context) => {
-  // Enable CORS
-  const headers = {
-    'Access-Control-Allow-Origin': event.headers.origin || '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Credentials': 'true',
-    'Content-Type': 'application/json',
-  };
+  // Get CORS headers with proper origin validation
+  const headers = getCorsHeaders(event);
 
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -86,6 +84,16 @@ export const handler = async (event, context) => {
         };
       }
 
+      // Safely parse JSON
+      const parseResult = safeJsonParse(event.body);
+      if (!parseResult.success) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: parseResult.error }),
+        };
+      }
+
       const { 
         name, 
         googleLink, 
@@ -94,13 +102,46 @@ export const handler = async (event, context) => {
         primaryColor, 
         secondaryColor, 
         backgroundColor 
-      } = JSON.parse(event.body);
+      } = parseResult.data;
 
+      // Validate campaign name
       if (!name) {
         return {
           statusCode: 400,
           headers,
           body: JSON.stringify({ error: 'Campaign name is required' }),
+        };
+      }
+
+      const nameValidation = validateTextLength(name, 255, 'Campaign name');
+      if (!nameValidation.valid) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: nameValidation.error }),
+        };
+      }
+
+      // Validate URLs if provided
+      if (googleLink && !isValidUrl(googleLink)) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Invalid Google link URL format' }),
+        };
+      }
+      if (yelpLink && !isValidUrl(yelpLink)) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Invalid Yelp link URL format' }),
+        };
+      }
+      if (logoUrl && !isValidUrl(logoUrl) && !logoUrl.startsWith('/api/serve-logo')) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Invalid logo URL format' }),
         };
       }
 

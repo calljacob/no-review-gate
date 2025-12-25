@@ -24,9 +24,17 @@ if (!connectionString) {
   process.exit(1);
 }
 
-// Admin user credentials
-const ADMIN_EMAIL = 'alberto@calljacob.com';
-const ADMIN_PASSWORD = '123456';
+// Admin user credentials - get from environment variables or prompt
+// For security, these should not be hardcoded
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'alberto@calljacob.com';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+if (!ADMIN_PASSWORD) {
+  console.error('❌ Error: ADMIN_PASSWORD environment variable is required');
+  console.error('   Set it with: export ADMIN_PASSWORD="your-secure-password"');
+  console.error('\n⚠️  Warning: Using default email. For production, also set ADMIN_EMAIL.');
+  process.exit(1);
+}
 
 const client = new Client({
   connectionString,
