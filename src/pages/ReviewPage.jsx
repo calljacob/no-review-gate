@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import StarRating from '../components/StarRating';
 import FeedbackForm from '../components/FeedbackForm';
@@ -21,8 +21,11 @@ const toCamelCase = (apiCampaign) => ({
 
 const ReviewPage = () => {
     const [searchParams] = useSearchParams();
-    const leadId = searchParams.get('leadid');
-    const campaignId = searchParams.get('campaign');
+    const paramsExtracted = useRef(false);
+    
+    // Store query params in state to persist after URL cleanup
+    const [leadId, setLeadId] = useState(null);
+    const [campaignId, setCampaignId] = useState(null);
 
     const [rating, setRating] = useState(0);
     const [step, setStep] = useState('rating'); // rating, feedback, links, done
@@ -30,6 +33,29 @@ const ReviewPage = () => {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState(null);
+
+    // Extract query params on mount and remove them from URL
+    useEffect(() => {
+        // Only extract once
+        if (paramsExtracted.current) return;
+        
+        const urlLeadId = searchParams.get('leadid');
+        const urlCampaignId = searchParams.get('campaign');
+        
+        if (urlLeadId) {
+            setLeadId(urlLeadId);
+        }
+        if (urlCampaignId) {
+            setCampaignId(urlCampaignId);
+        }
+        
+        // Remove query strings from URL using replaceState
+        if (urlLeadId || urlCampaignId) {
+            window.history.replaceState({}, '', '/review');
+        }
+        
+        paramsExtracted.current = true;
+    }, [searchParams]);
 
     useEffect(() => {
         const fetchCampaign = async () => {
@@ -204,7 +230,13 @@ const ReviewPage = () => {
                     </div>
 
                     {/* Footer */}
-                    <div className="mt-4 sm:mt-6 md:mt-8 text-center">
+                    <div className="mt-4 sm:mt-6 md:mt-8 text-center space-y-2">
+                        {/* Small display of LeadID */}
+                        {leadId && (
+                            <div className="text-slate-700 text-[10px] sm:text-xs font-mono">
+                                Lead ID: {leadId}
+                            </div>
+                        )}
                         <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
                             Designed & Developed by Alberto Martinez Jr for the Law Offices of Jacob Emrani
                         </p>
@@ -268,7 +300,13 @@ const ReviewPage = () => {
                     </div>
 
                     {/* Footer */}
-                    <div className="mt-4 sm:mt-6 md:mt-8 text-center">
+                    <div className="mt-4 sm:mt-6 md:mt-8 text-center space-y-2">
+                        {/* Small display of LeadID and Campaign */}
+                        {leadId && campaign && (
+                            <div className="text-slate-700 text-[10px] sm:text-xs font-mono">
+                                Lead ID: {leadId} | Campaign: {campaign.name}
+                            </div>
+                        )}
                         <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
                             Designed & Developed by Alberto Martinez Jr for the Law Offices of Jacob Emrani
                         </p>
@@ -429,7 +467,13 @@ const ReviewPage = () => {
                 </div>
 
                 {/* Footer */}
-                <div className="mt-4 sm:mt-6 md:mt-8 text-center">
+                <div className="mt-4 sm:mt-6 md:mt-8 text-center space-y-2">
+                    {/* Small display of LeadID and Campaign */}
+                    {leadId && campaign && (
+                        <div className="text-slate-700 text-[10px] sm:text-xs font-mono">
+                            Lead ID: {leadId} | Campaign: {campaign.name}
+                        </div>
+                    )}
                     <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
                         Designed & Developed by Alberto Martinez Jr for the Law Offices of Jacob Emrani
                     </p>
