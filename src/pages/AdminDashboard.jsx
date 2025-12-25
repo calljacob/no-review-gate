@@ -78,15 +78,34 @@ const AdminDashboard = () => {
                 const response = await fetch('/api/campaigns');
                 
                 if (!response.ok) {
-                    throw new Error(`Failed to fetch campaigns: ${response.statusText}`);
+                    let errorMessage = `Failed to fetch campaigns: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.error) {
+                            errorMessage = errorData.error;
+                        }
+                        if (errorData.message) {
+                            errorMessage += ` - ${errorData.message}`;
+                        }
+                    } catch (e) {
+                        // If error response isn't JSON, use status text
+                    }
+                    throw new Error(errorMessage);
                 }
                 
                 const data = await response.json();
                 // Convert API response to camelCase for frontend
-                setCampaigns(data.map(toCamelCase));
+                if (Array.isArray(data)) {
+                    setCampaigns(data.map(toCamelCase));
+                } else {
+                    console.error('Expected array but got:', data);
+                    setCampaigns([]);
+                    setError('Invalid response format from server');
+                }
             } catch (err) {
                 console.error('Error fetching campaigns:', err);
                 setError(err.message);
+                setCampaigns([]); // Set empty array on error so UI doesn't break
             }
         };
 
