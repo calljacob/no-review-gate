@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import StarRating from '../components/StarRating';
 import FeedbackForm from '../components/FeedbackForm';
 import ExternalLinks from '../components/ExternalLinks';
-import { MessageSquareHeart } from 'lucide-react';
+import { MessageSquareHeart, AlertCircle, Home } from 'lucide-react';
 
 // Helper function to convert API response (snake_case) to frontend format (camelCase)
 const toCamelCase = (apiCampaign) => ({
@@ -153,9 +153,62 @@ const ReviewPage = () => {
 
     if (!campaign) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4 sm:p-6" style={{ backgroundColor: '#0f172a' }}>
-                <div className="glass-panel p-6 sm:p-8 text-center max-w-md w-full">
-                    <p className="text-slate-400 text-sm sm:text-base">{error || 'Campaign not found'}</p>
+            <div 
+                className="min-h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 relative overflow-hidden"
+                style={{ backgroundColor: '#0f172a' }}
+            >
+                {/* Background Elements */}
+                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center opacity-20"></div>
+                <div 
+                    className="absolute inset-0 bg-gradient-to-b"
+                    style={{
+                        background: 'linear-gradient(to bottom, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.9), #0f172a)'
+                    }}
+                ></div>
+
+                {/* Decorative Blobs */}
+                <div 
+                    className="absolute top-[-10%] left-[-10%] w-48 h-48 sm:w-64 sm:h-64 md:w-96 md:h-96 rounded-full blur-3xl animate-pulse"
+                    style={{ backgroundColor: 'rgba(99, 102, 241, 0.2)' }}
+                ></div>
+                <div 
+                    className="absolute bottom-[-10%] right-[-10%] w-48 h-48 sm:w-64 sm:h-64 md:w-96 md:h-96 rounded-full blur-3xl animate-pulse delay-1000"
+                    style={{ backgroundColor: 'rgba(139, 92, 246, 0.2)' }}
+                ></div>
+
+                <div className="relative z-10 w-full max-w-lg px-2 sm:px-0">
+                    <div className="glass-panel p-6 sm:p-8 md:p-12 space-y-6 sm:space-y-8 text-center border-white/5 shadow-2xl shadow-black/50 backdrop-blur-2xl">
+                        <div className="space-y-4 sm:space-y-6">
+                            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30 mb-4">
+                                <AlertCircle size={32} className="sm:w-10 sm:h-10" />
+                            </div>
+                            
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white tracking-tight">
+                                Campaign Not Found
+                            </h1>
+                            
+                            <p className="text-slate-400 text-base sm:text-lg leading-relaxed">
+                                {error || 'The campaign you\'re looking for doesn\'t exist or may have been removed.'}
+                            </p>
+
+                            <div className="pt-4">
+                                <a
+                                    href="/"
+                                    className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30"
+                                >
+                                    <Home size={18} />
+                                    <span>Go Home</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="mt-4 sm:mt-6 md:mt-8 text-center">
+                        <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
+                            Designed & Developed by Alberto Martinez Jr for the Law Offices of Jacob Emrani
+                        </p>
+                    </div>
                 </div>
             </div>
         );

@@ -60,11 +60,32 @@ export const handler = async (event, context) => {
     // GET - Fetch all campaigns (accessible to all authenticated users)
     if (event.httpMethod === 'GET') {
       try {
-        const campaigns = await db`
-          SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
-          FROM campaigns
-          ORDER BY created_at DESC
+        // Check if enabled column exists
+        const [columnCheck] = await db`
+          SELECT EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_name = 'campaigns' 
+            AND column_name = 'enabled'
+          ) as column_exists
         `;
+
+        let campaigns;
+        if (columnCheck?.column_exists) {
+          // Column exists, include it in query
+          campaigns = await db`
+            SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
+            FROM campaigns
+            ORDER BY created_at DESC
+          `;
+        } else {
+          // Column doesn't exist, query without it (default enabled to true)
+          campaigns = await db`
+            SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, true as enabled, created_at
+            FROM campaigns
+            ORDER BY created_at DESC
+          `;
+        }
 
         return {
           statusCode: 200,
@@ -157,20 +178,51 @@ export const handler = async (event, context) => {
         };
       }
 
-      const [campaign] = await db`
-        INSERT INTO campaigns (name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled)
-        VALUES (
-          ${name}, 
-          ${googleLink || null}, 
-          ${yelpLink || null}, 
-          ${logoUrl || null}, 
-          ${primaryColor || null}, 
-          ${secondaryColor || null}, 
-          ${backgroundColor || null},
-          true
-        )
-        RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
+      // Check if enabled column exists before INSERT
+      const [columnCheck] = await db`
+        SELECT EXISTS (
+          SELECT 1 
+          FROM information_schema.columns 
+          WHERE table_name = 'campaigns' 
+          AND column_name = 'enabled'
+        ) as column_exists
       `;
+
+      let campaign;
+      if (columnCheck?.column_exists) {
+        // Column exists, include it in INSERT
+        [campaign] = await db`
+          INSERT INTO campaigns (name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled)
+          VALUES (
+            ${name}, 
+            ${googleLink || null}, 
+            ${yelpLink || null}, 
+            ${logoUrl || null}, 
+            ${primaryColor || null}, 
+            ${secondaryColor || null}, 
+            ${backgroundColor || null},
+            true
+          )
+          RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
+        `;
+      } else {
+        // Column doesn't exist, INSERT without it
+        [campaign] = await db`
+          INSERT INTO campaigns (name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color)
+          VALUES (
+            ${name}, 
+            ${googleLink || null}, 
+            ${yelpLink || null}, 
+            ${logoUrl || null}, 
+            ${primaryColor || null}, 
+            ${secondaryColor || null}, 
+            ${backgroundColor || null}
+          )
+          RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
+        `;
+        // Add enabled as true to the response
+        campaign = { ...campaign, enabled: true };
+      }
 
       return {
         statusCode: 201,

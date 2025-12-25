@@ -89,25 +89,55 @@ export const handler = async (event, context) => {
 
     // GET - Fetch a specific campaign
     if (event.httpMethod === 'GET') {
-      const [campaign] = await db`
-        SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
-        FROM campaigns
-        WHERE id = ${campaignIdInt}
-      `;
+      try {
+        // Check if enabled column exists
+        const [columnCheck] = await db`
+          SELECT EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_name = 'campaigns' 
+            AND column_name = 'enabled'
+          ) as column_exists
+        `;
 
-      if (!campaign) {
+        let campaign;
+        if (columnCheck?.column_exists) {
+          // Column exists, include it in query
+          [campaign] = await db`
+            SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
+            FROM campaigns
+            WHERE id = ${campaignIdInt}
+          `;
+        } else {
+          // Column doesn't exist, query without it (default enabled to true)
+          [campaign] = await db`
+            SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, true as enabled, created_at
+            FROM campaigns
+            WHERE id = ${campaignIdInt}
+          `;
+        }
+
+        if (!campaign) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Campaign not found' }),
+          };
+        }
+
         return {
-          statusCode: 404,
+          statusCode: 200,
           headers,
-          body: JSON.stringify({ error: 'Campaign not found' }),
+          body: JSON.stringify(campaign),
+        };
+      } catch (dbError) {
+        console.error('Error fetching campaign from database:', dbError);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'Failed to fetch campaign', message: dbError.message }),
         };
       }
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify(campaign),
-      };
     }
 
     // PUT - Update a campaign (admin only)
@@ -174,12 +204,31 @@ export const handler = async (event, context) => {
         };
       }
 
-      // Get current campaign to preserve existing values if not provided
-      const [currentCampaign] = await db`
-        SELECT name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled
-        FROM campaigns
-        WHERE id = ${campaignIdInt}
+      // Check if enabled column exists
+      const [columnCheck] = await db`
+        SELECT EXISTS (
+          SELECT 1 
+          FROM information_schema.columns 
+          WHERE table_name = 'campaigns' 
+          AND column_name = 'enabled'
+        ) as column_exists
       `;
+
+      // Get current campaign to preserve existing values if not provided
+      let currentCampaign;
+      if (columnCheck?.column_exists) {
+        [currentCampaign] = await db`
+          SELECT name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled
+          FROM campaigns
+          WHERE id = ${campaignIdInt}
+        `;
+      } else {
+        [currentCampaign] = await db`
+          SELECT name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, true as enabled
+          FROM campaigns
+          WHERE id = ${campaignIdInt}
+        `;
+      }
 
       if (!currentCampaign) {
         return {
@@ -199,20 +248,41 @@ export const handler = async (event, context) => {
       const updatedBackgroundColor = backgroundColor !== undefined ? (backgroundColor || null) : currentCampaign.background_color;
       const updatedEnabled = enabled !== undefined ? enabled : currentCampaign.enabled;
 
-      const [updatedCampaign] = await db`
-        UPDATE campaigns
-        SET 
-          name = ${updatedName},
-          google_link = ${updatedGoogleLink},
-          yelp_link = ${updatedYelpLink},
-          logo_url = ${updatedLogoUrl},
-          primary_color = ${updatedPrimaryColor},
-          secondary_color = ${updatedSecondaryColor},
-          background_color = ${updatedBackgroundColor},
-          enabled = ${updatedEnabled}
-        WHERE id = ${campaignIdInt}
-        RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
-      `;
+      let updatedCampaign;
+      if (columnCheck?.column_exists) {
+        // Column exists, include it in UPDATE
+        [updatedCampaign] = await db`
+          UPDATE campaigns
+          SET 
+            name = ${updatedName},
+            google_link = ${updatedGoogleLink},
+            yelp_link = ${updatedYelpLink},
+            logo_url = ${updatedLogoUrl},
+            primary_color = ${updatedPrimaryColor},
+            secondary_color = ${updatedSecondaryColor},
+            background_color = ${updatedBackgroundColor},
+            enabled = ${updatedEnabled}
+          WHERE id = ${campaignIdInt}
+          RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
+        `;
+      } else {
+        // Column doesn't exist, UPDATE without it
+        [updatedCampaign] = await db`
+          UPDATE campaigns
+          SET 
+            name = ${updatedName},
+            google_link = ${updatedGoogleLink},
+            yelp_link = ${updatedYelpLink},
+            logo_url = ${updatedLogoUrl},
+            primary_color = ${updatedPrimaryColor},
+            secondary_color = ${updatedSecondaryColor},
+            background_color = ${updatedBackgroundColor}
+          WHERE id = ${campaignIdInt}
+          RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
+        `;
+        // Add enabled to the response (we track it but don't store it)
+        updatedCampaign = { ...updatedCampaign, enabled: updatedEnabled };
+      }
 
       if (!updatedCampaign) {
         return {
