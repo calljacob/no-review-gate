@@ -15,6 +15,7 @@ const toCamelCase = (apiCampaign) => ({
     primaryColor: apiCampaign.primary_color || '#6366f1',
     secondaryColor: apiCampaign.secondary_color || '#8b5cf6',
     backgroundColor: apiCampaign.background_color || '#0f172a',
+    enabled: apiCampaign.enabled !== undefined ? apiCampaign.enabled : true,
     createdAt: apiCampaign.created_at
 });
 
@@ -167,6 +168,62 @@ const ReviewPage = () => {
             ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
             : '99, 102, 241'; // Default indigo
     };
+
+    // Check if campaign is disabled
+    if (!campaign.enabled) {
+        const logoUrl = campaign.logoUrl ? `/api/serve-logo?key=${campaign.logoUrl}` : null;
+        return (
+            <div 
+                className="min-h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 relative overflow-hidden"
+                style={{ backgroundColor: campaign.backgroundColor }}
+            >
+                {/* Background Elements */}
+                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center opacity-20"></div>
+                <div 
+                    className="absolute inset-0 bg-gradient-to-b"
+                    style={{
+                        background: `linear-gradient(to bottom, rgba(${hexToRgb(campaign.backgroundColor)}, 0.8), rgba(${hexToRgb(campaign.backgroundColor)}, 0.9), ${campaign.backgroundColor})`
+                    }}
+                ></div>
+
+                <div className="relative z-10 w-full max-w-lg px-2 sm:px-0">
+                    <div className="glass-panel p-6 sm:p-8 md:p-12 space-y-6 sm:space-y-8 text-center border-white/5 shadow-2xl shadow-black/50 backdrop-blur-2xl">
+                        {/* Logo */}
+                        {logoUrl && (
+                            <div className="text-center mb-6 animate-fade-in">
+                                <img 
+                                    src={logoUrl} 
+                                    alt="Logo" 
+                                    className="max-h-20 sm:max-h-24 max-w-full mx-auto object-contain"
+                                />
+                            </div>
+                        )}
+
+                        <div className="space-y-4 sm:space-y-6">
+                            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-500/20 text-slate-400 ring-1 ring-white/10 mb-4">
+                                <MessageSquareHeart size={32} className="sm:w-10 sm:h-10" />
+                            </div>
+                            
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white tracking-tight">
+                                This Feedback Campaign is Over
+                            </h1>
+                            
+                            <p className="text-slate-400 text-base sm:text-lg leading-relaxed">
+                                Please feel free to reach out to the original source to send in your feedback.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="mt-4 sm:mt-6 md:mt-8 text-center">
+                        <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
+                            Designed & Developed by Alberto Martinez Jr for the Law Offices of Jacob Emrani
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const primaryRgb = hexToRgb(campaign.primaryColor);
     const secondaryRgb = hexToRgb(campaign.secondaryColor);

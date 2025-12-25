@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon, LogOut, KeyRound, User as UserIcon, Upload, X, Star, Pencil, Users, Shield, Mail } from 'lucide-react';
+import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon, LogOut, KeyRound, User as UserIcon, Upload, X, Star, Pencil, Users, Shield, Mail, Power, PowerOff, HelpCircle } from 'lucide-react';
 
 // Helper function to convert API response (snake_case) to frontend format (camelCase)
 const toCamelCase = (apiCampaign) => ({
@@ -12,6 +12,7 @@ const toCamelCase = (apiCampaign) => ({
     primaryColor: apiCampaign.primary_color || '',
     secondaryColor: apiCampaign.secondary_color || '',
     backgroundColor: apiCampaign.background_color || '',
+    enabled: apiCampaign.enabled !== undefined ? apiCampaign.enabled : true,
     createdAt: apiCampaign.created_at
 });
 
@@ -310,28 +311,47 @@ const AdminDashboard = () => {
         setError(null);
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this campaign?')) {
+    const handleToggleEnabled = async (campaign) => {
+        const newEnabledState = !campaign.enabled;
+        const action = newEnabledState ? 'enable' : 'disable';
+        
+        if (!window.confirm(`Are you sure you want to ${action} this campaign?`)) {
             return;
         }
 
         try {
             setError(null);
-            const response = await fetch(`/api/campaign?id=${id}`, {
-                method: 'DELETE',
+            const response = await fetch(`/api/campaign?id=${campaign.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: campaign.name,
+                    googleLink: campaign.googleLink,
+                    yelpLink: campaign.yelpLink,
+                    logoUrl: campaign.logoUrl,
+                    primaryColor: campaign.primaryColor,
+                    secondaryColor: campaign.secondaryColor,
+                    backgroundColor: campaign.backgroundColor,
+                    enabled: newEnabledState
+                }),
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || `Failed to delete campaign: ${response.statusText}`);
+                throw new Error(errorData.error || `Failed to ${action} campaign: ${response.statusText}`);
             }
 
-            // Remove campaign from local state
-            setCampaigns(campaigns.filter(c => c.id !== id));
+            const updatedCampaign = await response.json();
+            const campaignCamelCase = toCamelCase(updatedCampaign);
+            
+            // Update campaign in local state
+            setCampaigns(campaigns.map(c => c.id === campaign.id ? campaignCamelCase : c));
         } catch (err) {
-            console.error('Error deleting campaign:', err);
+            console.error(`Error ${action}ing campaign:`, err);
             setError(err.message);
-            alert(`Failed to delete campaign: ${err.message}`);
+            alert(`Failed to ${action} campaign: ${err.message}`);
         }
     };
 
@@ -753,14 +773,35 @@ const AdminDashboard = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="block text-xs sm:text-sm font-medium text-slate-300">Google Review Link</label>
+                                    <label className="block text-xs sm:text-sm font-medium text-slate-300 flex items-center gap-2">
+                                        <span>Google Place ID</span>
+                                        <a
+                                            href="https://developers.google.com/maps/documentation/places/web-service/place-id"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center justify-center text-slate-400 hover:text-indigo-400 transition-colors"
+                                            title="Learn how to find your Place ID"
+                                        >
+                                            <HelpCircle size={14} />
+                                        </a>
+                                    </label>
                                     <input
-                                        type="url"
+                                        type="text"
                                         className="input-field text-sm sm:text-base"
                                         value={newCampaign.googleLink}
                                         onChange={e => setNewCampaign({ ...newCampaign, googleLink: e.target.value })}
-                                        placeholder="https://g.page/..."
+                                        placeholder="ChIJgUbEo8cfqokR5lP9_Wh_DaM"
                                     />
+                                    <p className="text-xs text-slate-500">
+                                        Enter your Google Place ID. <a
+                                            href="https://developers.google.com/maps/documentation/places/web-service/place-id"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-indigo-400 hover:text-indigo-300 underline"
+                                        >
+                                            Find your Place ID here
+                                        </a>.
+                                    </p>
                                 </div>
 
                                 <div className="space-y-2">
@@ -886,13 +927,22 @@ const AdminDashboard = () => {
                                 {campaigns.map(campaign => (
                         <div key={campaign.id} className="glass-panel p-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 hover:border-indigo-500/30 transition-colors group">
                             <div className="space-y-2 flex-1">
-                                <h3 className="text-xl font-bold text-white group-hover:text-indigo-400 transition-colors">
-                                    {campaign.name}
-                                </h3>
+                                <div className="flex items-center gap-3">
+                                    <h3 className="text-xl font-bold text-white group-hover:text-indigo-400 transition-colors">
+                                        {campaign.name}
+                                    </h3>
+                                    <span className={`px-2 py-1 rounded-md text-xs font-medium ${
+                                        campaign.enabled 
+                                            ? 'bg-emerald-500/10 text-emerald-400' 
+                                            : 'bg-slate-800 text-slate-400'
+                                    }`}>
+                                        {campaign.enabled ? 'Enabled' : 'Disabled'}
+                                    </span>
+                                </div>
                                 <div className="flex flex-wrap gap-4 text-sm text-slate-400">
                                     <span className={`flex items-center gap-1.5 px-2 py-1 rounded-md ${campaign.googleLink ? 'bg-blue-500/10 text-blue-400' : 'bg-slate-800'}`}>
                                         <ExternalLink size={14} />
-                                        {campaign.googleLink ? 'Google Linked' : 'No Google Link'}
+                                        {campaign.googleLink ? 'Google Place ID Set' : 'No Google Place ID'}
                                     </span>
                                     <span className={`flex items-center gap-1.5 px-2 py-1 rounded-md ${campaign.yelpLink ? 'bg-red-500/10 text-red-400' : 'bg-slate-800'}`}>
                                         <ExternalLink size={14} />
@@ -938,11 +988,19 @@ const AdminDashboard = () => {
                                 </button>
 
                                 <button
-                                    onClick={() => handleDelete(campaign.id)}
-                                    className="w-full sm:w-auto p-2.5 text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
-                                    title="Delete Campaign"
+                                    onClick={() => handleToggleEnabled(campaign)}
+                                    className={`w-full sm:w-auto p-2.5 rounded-lg transition-colors border border-transparent ${
+                                        campaign.enabled
+                                            ? 'text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 hover:border-amber-500/20'
+                                            : 'text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 hover:border-emerald-500/20'
+                                    }`}
+                                    title={campaign.enabled ? 'Disable Campaign' : 'Enable Campaign'}
                                 >
-                                    <Trash2 size={20} className="mx-auto" />
+                                    {campaign.enabled ? (
+                                        <PowerOff size={20} className="mx-auto" />
+                                    ) : (
+                                        <Power size={20} className="mx-auto" />
+                                    )}
                                 </button>
                             </div>
                         </div>

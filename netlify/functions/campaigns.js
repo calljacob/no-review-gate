@@ -60,7 +60,7 @@ export const handler = async (event, context) => {
     // GET - Fetch all campaigns (accessible to all authenticated users)
     if (event.httpMethod === 'GET') {
       const campaigns = await db`
-        SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
+        SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
         FROM campaigns
         ORDER BY created_at DESC
       `;
@@ -122,12 +122,12 @@ export const handler = async (event, context) => {
         };
       }
 
-      // Validate URLs if provided
-      if (googleLink && !isValidUrl(googleLink)) {
+      // Validate Google Place ID (if provided, must be non-empty string)
+      if (googleLink !== undefined && googleLink !== null && googleLink !== '' && typeof googleLink !== 'string') {
         return {
           statusCode: 400,
           headers,
-          body: JSON.stringify({ error: 'Invalid Google link URL format' }),
+          body: JSON.stringify({ error: 'Google Place ID must be a valid string' }),
         };
       }
       if (yelpLink && !isValidUrl(yelpLink)) {
@@ -146,7 +146,7 @@ export const handler = async (event, context) => {
       }
 
       const [campaign] = await db`
-        INSERT INTO campaigns (name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color)
+        INSERT INTO campaigns (name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled)
         VALUES (
           ${name}, 
           ${googleLink || null}, 
@@ -154,9 +154,10 @@ export const handler = async (event, context) => {
           ${logoUrl || null}, 
           ${primaryColor || null}, 
           ${secondaryColor || null}, 
-          ${backgroundColor || null}
+          ${backgroundColor || null},
+          true
         )
-        RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
+        RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
       `;
 
       return {

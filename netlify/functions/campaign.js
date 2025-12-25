@@ -90,7 +90,7 @@ export const handler = async (event, context) => {
     // GET - Fetch a specific campaign
     if (event.httpMethod === 'GET') {
       const [campaign] = await db`
-        SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
+        SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
         FROM campaigns
         WHERE id = ${campaignIdInt}
       `;
@@ -139,7 +139,8 @@ export const handler = async (event, context) => {
         logoUrl, 
         primaryColor, 
         secondaryColor, 
-        backgroundColor 
+        backgroundColor,
+        enabled
       } = parseResult.data;
 
       // Validate inputs
@@ -154,11 +155,12 @@ export const handler = async (event, context) => {
         }
       }
 
-      if (googleLink && !isValidUrl(googleLink)) {
+      // Validate Google Place ID (if provided, must be non-empty string)
+      if (googleLink !== undefined && googleLink !== null && googleLink !== '' && typeof googleLink !== 'string') {
         return {
           statusCode: 400,
           headers,
-          body: JSON.stringify({ error: 'Invalid Google link URL format' }),
+          body: JSON.stringify({ error: 'Google Place ID must be a valid string' }),
         };
       }
       if (yelpLink && !isValidUrl(yelpLink)) {
@@ -169,18 +171,44 @@ export const handler = async (event, context) => {
         };
       }
 
+      // Get current campaign to preserve existing values if not provided
+      const [currentCampaign] = await db`
+        SELECT name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled
+        FROM campaigns
+        WHERE id = ${campaignIdInt}
+      `;
+
+      if (!currentCampaign) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Campaign not found' }),
+        };
+      }
+
+      // Use provided values or keep existing ones
+      const updatedName = name !== undefined ? name : currentCampaign.name;
+      const updatedGoogleLink = googleLink !== undefined ? (googleLink || null) : currentCampaign.google_link;
+      const updatedYelpLink = yelpLink !== undefined ? (yelpLink || null) : currentCampaign.yelp_link;
+      const updatedLogoUrl = logoUrl !== undefined ? logoUrl : currentCampaign.logo_url;
+      const updatedPrimaryColor = primaryColor !== undefined ? (primaryColor || null) : currentCampaign.primary_color;
+      const updatedSecondaryColor = secondaryColor !== undefined ? (secondaryColor || null) : currentCampaign.secondary_color;
+      const updatedBackgroundColor = backgroundColor !== undefined ? (backgroundColor || null) : currentCampaign.background_color;
+      const updatedEnabled = enabled !== undefined ? enabled : currentCampaign.enabled;
+
       const [updatedCampaign] = await db`
         UPDATE campaigns
         SET 
-          name = ${name !== undefined ? name : null},
-          google_link = ${googleLink || null},
-          yelp_link = ${yelpLink || null},
-          logo_url = ${logoUrl !== undefined ? logoUrl : null},
-          primary_color = ${primaryColor || null},
-          secondary_color = ${secondaryColor || null},
-          background_color = ${backgroundColor || null}
+          name = ${updatedName},
+          google_link = ${updatedGoogleLink},
+          yelp_link = ${updatedYelpLink},
+          logo_url = ${updatedLogoUrl},
+          primary_color = ${updatedPrimaryColor},
+          secondary_color = ${updatedSecondaryColor},
+          background_color = ${updatedBackgroundColor},
+          enabled = ${updatedEnabled}
         WHERE id = ${campaignIdInt}
-        RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
+        RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
       `;
 
       if (!updatedCampaign) {
@@ -198,36 +226,12 @@ export const handler = async (event, context) => {
       };
     }
 
-    // DELETE - Delete a campaign (admin only)
+    // DELETE - Delete a campaign (disabled - campaigns can only be disabled, not deleted)
     if (event.httpMethod === 'DELETE') {
-      // Verify admin authentication
-      const auth = await verifyAdmin(event);
-      if (!auth.authenticated) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({ error: auth.error }),
-        };
-      }
-
-      const [deletedCampaign] = await db`
-        DELETE FROM campaigns
-        WHERE id = ${campaignIdInt}
-        RETURNING id
-      `;
-
-      if (!deletedCampaign) {
-        return {
-          statusCode: 404,
-          headers,
-          body: JSON.stringify({ error: 'Campaign not found' }),
-        };
-      }
-
       return {
-        statusCode: 200,
+        statusCode: 405,
         headers,
-        body: JSON.stringify({ message: 'Campaign deleted successfully' }),
+        body: JSON.stringify({ error: 'Campaign deletion is not allowed. Please disable the campaign instead.' }),
       };
     }
 

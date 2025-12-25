@@ -2,12 +2,15 @@ import React from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
 
 const ExternalLinks = ({ googleLink, yelpLink }) => {
+    // Construct Google review URL from Place ID
+    const googleReviewUrl = googleLink ? `https://search.google.com/local/writereview?placeid=${encodeURIComponent(googleLink)}` : null;
+    
     return (
         <div className="w-full animate-fade-in">
             <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
-                {googleLink && (
+                {googleReviewUrl && (
                     <a
-                        href={googleLink}
+                        href={googleReviewUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 bg-white text-slate-900 rounded-xl 
