@@ -238,7 +238,7 @@ const ReviewPage = () => {
                             </div>
                         )}
                         <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
-                            Designed & Developed by Alberto Martinez Jr for the Law Offices of Jacob Emrani
+                            Designed & Developed by Alberto Martinez Jr
                         </p>
                     </div>
                 </div>
@@ -308,7 +308,7 @@ const ReviewPage = () => {
                             </div>
                         )}
                         <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
-                            Designed & Developed by Alberto Martinez Jr for the Law Offices of Jacob Emrani
+                            Designed & Developed by Alberto Martinez Jr
                         </p>
                     </div>
                 </div>
@@ -475,7 +475,7 @@ const ReviewPage = () => {
                         </div>
                     )}
                     <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
-                        Designed & Developed by Alberto Martinez Jr for the Law Offices of Jacob Emrani
+                        Designed & Developed by Alberto Martinez Jr
                     </p>
                 </div>
             </div>
