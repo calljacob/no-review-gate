@@ -978,15 +978,24 @@ const AdminDashboard = () => {
                                     <input
                                         readOnly
                                         value={generateLink(campaign.id)}
-                                        className="w-full sm:w-80 pl-9 pr-10 py-2.5 bg-slate-950/50 border border-slate-800 rounded-lg text-slate-300 text-sm focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                                        className="w-full sm:w-80 pl-9 pr-20 py-2.5 bg-slate-950/50 border border-slate-800 rounded-lg text-slate-300 text-sm focus:ring-1 focus:ring-indigo-500/50 transition-all"
                                     />
-                                    <button
-                                        onClick={() => copyToClipboard(generateLink(campaign.id))}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
-                                        title="Copy Link"
-                                    >
-                                        <Copy size={14} />
-                                    </button>
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                        <button
+                                            onClick={() => copyToClipboard(generateLink(campaign.id))}
+                                            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+                                            title="Copy Link"
+                                        >
+                                            <Copy size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => window.open(generateLink(campaign.id), '_blank')}
+                                            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
+                                            title="Visit Link"
+                                        >
+                                            <ExternalLink size={14} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <button
