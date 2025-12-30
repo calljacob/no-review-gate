@@ -1,10 +1,44 @@
-import { getStore } from '@netlify/blobs';
+import { Storage } from '@google-cloud/storage';
+
+const BUCKET_NAME = 'feedback-calljacob';
+
+/**
+ * Initialize Google Cloud Storage with proper credential handling
+ * Supports credentials via:
+ * 1. GCS_SERVICE_ACCOUNT_KEY - JSON string (recommended for Netlify)
+ * 2. GOOGLE_APPLICATION_CREDENTIALS - Path to service account JSON file
+ * 3. Default credentials from the environment (if running on GCP)
+ */
+function getStorageClient() {
+  const storageOptions = {
+    projectId: process.env.GCS_PROJECT_ID,
+  };
+
+  // If GCS_SERVICE_ACCOUNT_KEY is provided as JSON string, parse it
+  if (process.env.GCS_SERVICE_ACCOUNT_KEY) {
+    try {
+      const credentials = JSON.parse(process.env.GCS_SERVICE_ACCOUNT_KEY);
+      storageOptions.credentials = credentials;
+    } catch (error) {
+      console.error('Failed to parse GCS_SERVICE_ACCOUNT_KEY:', error);
+      throw new Error('Invalid GCS_SERVICE_ACCOUNT_KEY format. Must be valid JSON.');
+    }
+  }
+
+  return new Storage(storageOptions);
+}
+
+// Initialize Storage client
+const storage = getStorageClient();
 
 /**
  * Netlify Serverless Function
- * Handles GET requests to serve campaign logos from Blobs
+ * Handles GET requests to serve campaign logos from Google Cloud Storage
  * 
- * GET: /api/serve-logo?key=<blob-key> - Serve a logo image
+ * GET: /api/serve-logo?key=<object-name> - Serve a logo image
+ * 
+ * Note: Since files are made public in GCS, you can also use the direct public URL:
+ * https://storage.googleapis.com/feedback-calljacob/<object-name>
  */
 export const handler = async (event, context) => {
   const headers = {
@@ -24,28 +58,26 @@ export const handler = async (event, context) => {
   }
 
   try {
-    const blobKey = event.queryStringParameters?.key;
+    const objectName = event.queryStringParameters?.key;
 
-    if (!blobKey) {
+    if (!objectName) {
       return {
         statusCode: 400,
         headers: {
           ...headers,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ error: 'Blob key is required' }),
+        body: JSON.stringify({ error: 'Object key is required' }),
       };
     }
 
-    // Get the blob from Netlify Blobs
-    const store = getStore({
-      name: 'campaign-logos',
-      consistency: 'strong',
-    });
+    // Get the file from Google Cloud Storage
+    const bucket = storage.bucket(BUCKET_NAME);
+    const file = bucket.file(objectName);
 
-    const blob = await store.get(blobKey, { type: 'arrayBuffer' });
-
-    if (!blob) {
+    // Check if file exists
+    const [exists] = await file.exists();
+    if (!exists) {
       return {
         statusCode: 404,
         headers: {
@@ -56,9 +88,10 @@ export const handler = async (event, context) => {
       };
     }
 
-    // Determine content type from file extension
-    const getContentType = (key) => {
-      const ext = key.split('.').pop()?.toLowerCase();
+    // Get file metadata to determine content type
+    const [metadata] = await file.getMetadata();
+    const contentType = metadata.contentType || (() => {
+      const ext = objectName.split('.').pop()?.toLowerCase();
       const typeMap = {
         'png': 'image/png',
         'jpg': 'image/jpeg',
@@ -68,14 +101,11 @@ export const handler = async (event, context) => {
         'webp': 'image/webp',
       };
       return typeMap[ext] || 'image/png';
-    };
-    
-    const contentType = getContentType(blobKey);
+    })();
 
-    // Convert ArrayBuffer to base64 for response (required by Netlify Functions)
-    // Note: While base64 adds ~33% overhead, it's required for binary data in serverless functions
-    const buffer = Buffer.from(blob);
-    const base64 = buffer.toString('base64');
+    // Download file content
+    const [fileBuffer] = await file.download();
+    const base64 = fileBuffer.toString('base64');
 
     return {
       statusCode: 200,
@@ -83,7 +113,7 @@ export const handler = async (event, context) => {
         ...headers,
         'Content-Type': contentType,
         // Add ETag for better caching
-        'ETag': `"${blobKey}"`,
+        'ETag': `"${objectName}"`,
         // Vary header for content negotiation
         'Vary': 'Accept-Encoding',
       },

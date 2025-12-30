@@ -1,10 +1,41 @@
-import { getStore } from '@netlify/blobs';
+import { Storage } from '@google-cloud/storage';
 import crypto from 'crypto';
 import { safeJsonParse, validateTextLength } from './utils/security.js';
 
+const BUCKET_NAME = 'feedback-calljacob';
+
+/**
+ * Initialize Google Cloud Storage with proper credential handling
+ * Supports credentials via:
+ * 1. GCS_SERVICE_ACCOUNT_KEY - JSON string (recommended for Netlify)
+ * 2. GOOGLE_APPLICATION_CREDENTIALS - Path to service account JSON file
+ * 3. Default credentials from the environment (if running on GCP)
+ */
+function getStorageClient() {
+  const storageOptions = {
+    projectId: process.env.GCS_PROJECT_ID,
+  };
+
+  // If GCS_SERVICE_ACCOUNT_KEY is provided as JSON string, parse it
+  if (process.env.GCS_SERVICE_ACCOUNT_KEY) {
+    try {
+      const credentials = JSON.parse(process.env.GCS_SERVICE_ACCOUNT_KEY);
+      storageOptions.credentials = credentials;
+    } catch (error) {
+      console.error('Failed to parse GCS_SERVICE_ACCOUNT_KEY:', error);
+      throw new Error('Invalid GCS_SERVICE_ACCOUNT_KEY format. Must be valid JSON.');
+    }
+  }
+
+  return new Storage(storageOptions);
+}
+
+// Initialize Storage client
+const storage = getStorageClient();
+
 /**
  * Netlify Serverless Function
- * Handles POST requests to upload campaign logos
+ * Handles POST requests to upload campaign logos to Google Cloud Storage
  * 
  * POST: /api/upload-logo - Upload a logo file
  * Body: JSON with { base64: string, filename: string, contentType: string, campaignId?: number }
@@ -107,35 +138,43 @@ export const handler = async (event, context) => {
     // Generate unique filename using campaign ID if provided, or random hash
     const fileExt = filename.split('.').pop() || 'png';
     const uniqueId = crypto.randomBytes(8).toString('hex');
-    const blobKey = campaignIdInt 
-      ? `campaign-${campaignIdInt}-${uniqueId}.${fileExt}`
-      : `logo-${uniqueId}.${fileExt}`;
+    const objectName = campaignIdInt 
+      ? `campaign-logos/campaign-${campaignIdInt}-${uniqueId}.${fileExt}`
+      : `campaign-logos/logo-${uniqueId}.${fileExt}`;
 
-    // Store in Netlify Blobs
-    const store = getStore({
-      name: 'campaign-logos',
-      consistency: 'strong',
-    });
+    // Get bucket reference
+    const bucket = storage.bucket(BUCKET_NAME);
 
     // Convert base64 string to buffer for storage
     const fileBuffer = Buffer.from(base64Data, 'base64');
     
-    await store.set(blobKey, fileBuffer, {
+    // Upload file to Google Cloud Storage
+    const file = bucket.file(objectName);
+    await file.save(fileBuffer, {
       metadata: {
-        filename,
         contentType: fileContentType,
-        uploadedAt: new Date().toISOString(),
-        campaignId: campaignIdInt || null,
+        metadata: {
+          originalFilename: filename,
+          uploadedAt: new Date().toISOString(),
+          campaignId: campaignIdInt?.toString() || null,
+        },
       },
     });
 
-    // Return the blob key (this will be used as logo_url)
+    // Make the file publicly accessible
+    await file.makePublic();
+
+    // Get the public URL
+    const publicUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${objectName}`;
+
+    // Return the object name (this will be stored as logo_url in the database)
+    // We can store either the object name or the full URL - storing object name for flexibility
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        blobKey,
-        url: `/api/serve-logo?key=${blobKey}`,
+        blobKey: objectName, // Keep same key name for backward compatibility
+        url: publicUrl, // Public URL for direct access
       }),
     };
   } catch (error) {
