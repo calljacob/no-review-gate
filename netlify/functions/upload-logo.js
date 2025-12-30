@@ -25,13 +25,22 @@ function getStorageClient() {
       console.error('Failed to parse GCS_SERVICE_ACCOUNT_KEY:', error);
       throw new Error('Invalid GCS_SERVICE_ACCOUNT_KEY format. Must be valid JSON.');
     }
+  } else if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    // Check if we have any credentials at all
+    throw new Error('GCS credentials not found. Please set GCS_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS environment variable.');
   }
 
   return new Storage(storageOptions);
 }
 
-// Initialize Storage client
-const storage = getStorageClient();
+// Lazy initialization - only create client when needed
+let storage = null;
+function getStorage() {
+  if (!storage) {
+    storage = getStorageClient();
+  }
+  return storage;
+}
 
 /**
  * Netlify Serverless Function
@@ -142,8 +151,11 @@ export const handler = async (event, context) => {
       ? `campaign-logos/campaign-${campaignIdInt}-${uniqueId}.${fileExt}`
       : `campaign-logos/logo-${uniqueId}.${fileExt}`;
 
+    // Get storage client (lazy initialization)
+    const storageClient = getStorage();
+    
     // Get bucket reference
-    const bucket = storage.bucket(BUCKET_NAME);
+    const bucket = storageClient.bucket(BUCKET_NAME);
 
     // Convert base64 string to buffer for storage
     const fileBuffer = Buffer.from(base64Data, 'base64');
@@ -179,12 +191,30 @@ export const handler = async (event, context) => {
     };
   } catch (error) {
     console.error('Upload error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      name: error.name,
+    });
+    
+    // Provide more helpful error messages
+    let errorMessage = error.message || 'Failed to upload logo';
+    if (error.message?.includes('credentials')) {
+      errorMessage = 'Google Cloud Storage credentials not configured. Please set GCS_SERVICE_ACCOUNT_KEY environment variable.';
+    } else if (error.message?.includes('bucket') || error.code === 404) {
+      errorMessage = `Bucket '${BUCKET_NAME}' not found. Please verify the bucket exists and credentials have access.`;
+    } else if (error.code === 403 || error.message?.includes('permission')) {
+      errorMessage = 'Permission denied. Please check that the service account has Storage Object Admin permissions.';
+    }
+    
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
         error: 'Failed to upload logo', 
-        message: error.message 
+        message: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       }),
     };
   }

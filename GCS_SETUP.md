@@ -123,25 +123,107 @@ netlify dev
 
 ## Troubleshooting
 
+### 500 Error: "Failed to upload logo"
+
+This is the most common error. Check the following:
+
+#### 1. Check Environment Variables in Netlify
+- Go to **Site settings > Environment variables** in Netlify
+- Verify `GCS_SERVICE_ACCOUNT_KEY` is set
+- Verify `GCS_PROJECT_ID` is set (recommended)
+- **Important**: After adding/updating environment variables, you may need to redeploy your site
+
+#### 2. Verify GCS_SERVICE_ACCOUNT_KEY Format
+- The value must be valid JSON
+- In Netlify, paste it as a single-line string (minified)
+- Example of correct format:
+  ```json
+  {"type":"service_account","project_id":"your-project","private_key_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email":"...","client_id":"...","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"...","client_x509_cert_url":"..."}
+  ```
+- **Common mistake**: Including newlines or extra spaces. The JSON should be on one line.
+
+#### 3. Check Netlify Function Logs
+- Go to **Functions** tab in Netlify dashboard
+- Click on the `upload-logo` function
+- Check the logs for detailed error messages
+- Look for messages like:
+  - "GCS credentials not found" → Missing environment variable
+  - "Invalid GCS_SERVICE_ACCOUNT_KEY format" → JSON parsing error
+  - "Bucket not found" → Bucket doesn't exist or wrong name
+  - "Permission denied" → Service account lacks permissions
+
+#### 4. Verify Bucket Exists
+- Go to [Google Cloud Console](https://console.cloud.google.com/storage/browser)
+- Verify the bucket `feedback-calljacob` exists
+- Check it's in the correct region: `us-west2`
+- If it doesn't exist, create it:
+  ```bash
+  gsutil mb -l us-west2 gs://feedback-calljacob
+  ```
+
+#### 5. Verify Service Account Permissions
+- Go to **IAM & Admin > Service Accounts** in Google Cloud Console
+- Find your service account (the email from the JSON key)
+- Verify it has the **Storage Object Admin** role
+- Or ensure it has these permissions:
+  - `storage.objects.create`
+  - `storage.objects.get`
+  - `storage.objects.setIamPolicy` (for making files public)
+  - `storage.buckets.get`
+
+#### 6. Test Credentials Locally
+Create a test file to verify credentials work:
+```javascript
+// test-gcs.js
+import { Storage } from '@google-cloud/storage';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const storage = new Storage({
+  credentials: JSON.parse(process.env.GCS_SERVICE_ACCOUNT_KEY),
+  projectId: process.env.GCS_PROJECT_ID,
+});
+
+const bucket = storage.bucket('feedback-calljacob');
+
+bucket.exists()
+  .then(([exists]) => {
+    console.log('Bucket exists:', exists);
+    if (exists) {
+      console.log('✅ Credentials are working!');
+    } else {
+      console.log('❌ Bucket not found');
+    }
+  })
+  .catch(err => {
+    console.error('❌ Error:', err.message);
+  });
+```
+
 ### Error: "Invalid GCS_SERVICE_ACCOUNT_KEY format"
 - Ensure the JSON is valid and properly escaped in Netlify
 - Try minifying the JSON before pasting (remove all newlines)
 - Check that all quotes are properly escaped
+- Verify the private key includes `\n` characters (they should be literal `\n`, not actual newlines)
 
 ### Error: "Permission denied" or "Access denied"
 - Verify the service account has the correct IAM roles
 - Check that the service account email has access to the bucket
 - Ensure the bucket name is correct: `feedback-calljacob`
+- Grant the service account **Storage Object Admin** role at the project or bucket level
 
 ### Error: "Bucket not found"
 - Verify the bucket exists in your Google Cloud project
-- Check the bucket name matches exactly: `feedback-calljacob`
+- Check the bucket name matches exactly: `feedback-calljacob` (case-sensitive)
 - Ensure you're using the correct GCP project
+- Verify the service account has access to the project where the bucket exists
 
 ### Files not accessible publicly
 - The upload function automatically makes files public with `file.makePublic()`
 - If this fails, check that the service account has `storage.objects.setIamPolicy` permission
 - Alternatively, configure the bucket to allow public access (less secure)
+- You can test by accessing: `https://storage.googleapis.com/feedback-calljacob/campaign-logos/<filename>`
 
 ## Security Notes
 

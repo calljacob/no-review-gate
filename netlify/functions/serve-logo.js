@@ -23,13 +23,22 @@ function getStorageClient() {
       console.error('Failed to parse GCS_SERVICE_ACCOUNT_KEY:', error);
       throw new Error('Invalid GCS_SERVICE_ACCOUNT_KEY format. Must be valid JSON.');
     }
+  } else if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    // Check if we have any credentials at all
+    throw new Error('GCS credentials not found. Please set GCS_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS environment variable.');
   }
 
   return new Storage(storageOptions);
 }
 
-// Initialize Storage client
-const storage = getStorageClient();
+// Lazy initialization - only create client when needed
+let storage = null;
+function getStorage() {
+  if (!storage) {
+    storage = getStorageClient();
+  }
+  return storage;
+}
 
 /**
  * Netlify Serverless Function
@@ -71,8 +80,11 @@ export const handler = async (event, context) => {
       };
     }
 
+    // Get storage client (lazy initialization)
+    const storageClient = getStorage();
+    
     // Get the file from Google Cloud Storage
-    const bucket = storage.bucket(BUCKET_NAME);
+    const bucket = storageClient.bucket(BUCKET_NAME);
     const file = bucket.file(objectName);
 
     // Check if file exists
