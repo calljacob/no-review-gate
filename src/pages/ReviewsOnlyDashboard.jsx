@@ -75,7 +75,8 @@ const ReviewsOnlyDashboard = () => {
                 const reviewsData = await reviewsResponse.json();
                 const formattedReviews = reviewsData.map(review => ({
                     id: review.id,
-                    leadId: review.lead_id,
+                    leadId: review.lead_id || null,
+                    projectId: review.project_id || null,
                     campaignId: review.campaign_id,
                     rating: review.rating,
                     feedback: review.feedback || '',
@@ -113,7 +114,8 @@ const ReviewsOnlyDashboard = () => {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(review => 
                 review.feedback.toLowerCase().includes(query) ||
-                review.leadId.toString().includes(query)
+                (review.leadId && review.leadId.toString().toLowerCase().includes(query)) ||
+                (review.projectId && review.projectId.toString().toLowerCase().includes(query))
             );
         }
 
@@ -131,8 +133,8 @@ const ReviewsOnlyDashboard = () => {
                     bValue = b.rating;
                     break;
                 case 'lead_id':
-                    aValue = a.leadId;
-                    bValue = b.leadId;
+                    aValue = a.leadId || a.projectId || '';
+                    bValue = b.leadId || b.projectId || '';
                     break;
                 default:
                     aValue = a.createdAt;
@@ -384,7 +386,7 @@ const ReviewsOnlyDashboard = () => {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Search by feedback or lead ID..."
+                                    placeholder="Search by feedback, Lead ID, or Project ID..."
                                     className="input-field pl-10"
                                 />
                             </div>
@@ -437,7 +439,7 @@ const ReviewsOnlyDashboard = () => {
                                                 onClick={() => handleSort('lead_id')}
                                                 className="flex items-center gap-2 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
                                             >
-                                                Lead ID
+                                                Identifier
                                                 {getSortIcon('lead_id')}
                                             </button>
                                         </th>
@@ -468,7 +470,7 @@ const ReviewsOnlyDashboard = () => {
                                                 {getCampaignName(review.campaignId)}
                                             </td>
                                             <td className="px-6 py-4 text-sm text-slate-300 font-mono">
-                                                {review.leadId}
+                                                {review.leadId ? `Lead ID: ${review.leadId}` : review.projectId ? `Project ID: ${review.projectId}` : 'N/A'}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">

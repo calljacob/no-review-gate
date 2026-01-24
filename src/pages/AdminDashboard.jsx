@@ -13,6 +13,7 @@ const toCamelCase = (apiCampaign) => ({
     secondaryColor: apiCampaign.secondary_color || '',
     backgroundColor: apiCampaign.background_color || '',
     enabled: apiCampaign.enabled !== undefined ? apiCampaign.enabled : true,
+    campaignType: apiCampaign.campaign_type || 'lead_docket',
     createdAt: apiCampaign.created_at
 });
 
@@ -41,6 +42,7 @@ const AdminDashboard = () => {
         primaryColor: '#6366f1',
         secondaryColor: '#8b5cf6',
         backgroundColor: '#0f172a',
+        campaignType: 'lead_docket',
         logoFile: null,
         logoPreview: null
     });
@@ -256,6 +258,7 @@ const AdminDashboard = () => {
                     primaryColor: newCampaign.primaryColor || null,
                     secondaryColor: newCampaign.secondaryColor || null,
                     backgroundColor: newCampaign.backgroundColor || null,
+                    campaignType: newCampaign.campaignType,
                 }),
             });
 
@@ -284,6 +287,7 @@ const AdminDashboard = () => {
                 primaryColor: '#6366f1',
                 secondaryColor: '#8b5cf6',
                 backgroundColor: '#0f172a',
+                campaignType: 'lead_docket',
                 logoFile: null,
                 logoPreview: null
             });
@@ -306,6 +310,7 @@ const AdminDashboard = () => {
             primaryColor: campaign.primaryColor || '#6366f1',
             secondaryColor: campaign.secondaryColor || '#8b5cf6',
             backgroundColor: campaign.backgroundColor || '#0f172a',
+            campaignType: campaign.campaignType || 'lead_docket',
             logoFile: null,
             logoPreview: campaign.logoUrl ? `/api/serve-logo?key=${campaign.logoUrl}` : null
         });
@@ -324,6 +329,7 @@ const AdminDashboard = () => {
             primaryColor: '#6366f1',
             secondaryColor: '#8b5cf6',
             backgroundColor: '#0f172a',
+            campaignType: 'lead_docket',
             logoFile: null,
             logoPreview: null
         });
@@ -353,7 +359,8 @@ const AdminDashboard = () => {
                     primaryColor: campaign.primaryColor,
                     secondaryColor: campaign.secondaryColor,
                     backgroundColor: campaign.backgroundColor,
-                    enabled: newEnabledState
+                    enabled: newEnabledState,
+                    campaignType: campaign.campaignType || 'lead_docket'
                 }),
             });
 
@@ -374,10 +381,17 @@ const AdminDashboard = () => {
         }
     };
 
-    const generateLink = (campaignId) => {
+    const generateLink = (campaign) => {
         const baseUrl = window.location.origin;
-        const randomLeadId = Math.floor(Math.random() * 100000);
-        return `${baseUrl}/review?leadid=${randomLeadId}&campaign=${campaignId}`;
+        const campaignId = campaign.id;
+        const campaignType = campaign.campaignType || 'lead_docket';
+        
+        if (campaignType === 'filevine') {
+            return `${baseUrl}/review?projectid={projectid}&campaign=${campaignId}`;
+        } else {
+            // Default to lead_docket
+            return `${baseUrl}/review?leadid={{LeadId}}&campaign=${campaignId}`;
+        }
     };
 
     const copyToClipboard = (text) => {
@@ -683,6 +697,24 @@ const AdminDashboard = () => {
 
                             <form onSubmit={handleSave} className="space-y-4 sm:space-y-5">
                                 <div className="space-y-2">
+                                    <label className="block text-xs sm:text-sm font-medium text-slate-300">Campaign Type</label>
+                                    <select
+                                        required
+                                        className="input-field text-sm sm:text-base"
+                                        value={newCampaign.campaignType}
+                                        onChange={e => setNewCampaign({ ...newCampaign, campaignType: e.target.value })}
+                                    >
+                                        <option value="lead_docket">New campaign for Lead Docket</option>
+                                        <option value="filevine">New campaign for Filevine</option>
+                                    </select>
+                                    <p className="text-xs text-slate-500">
+                                        {newCampaign.campaignType === 'lead_docket' 
+                                            ? 'This campaign will use Lead ID for review requests.'
+                                            : 'This campaign will use Project ID for review requests.'}
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2">
                                     <label className="block text-xs sm:text-sm font-medium text-slate-300">Campaign Name</label>
                                     <input
                                         type="text"
@@ -977,19 +1009,19 @@ const AdminDashboard = () => {
                                     </div>
                                     <input
                                         readOnly
-                                        value={generateLink(campaign.id)}
+                                        value={generateLink(campaign)}
                                         className="w-full sm:w-80 pl-9 pr-20 py-2.5 bg-slate-950/50 border border-slate-800 rounded-lg text-slate-300 text-sm focus:ring-1 focus:ring-indigo-500/50 transition-all"
                                     />
                                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                                         <button
-                                            onClick={() => copyToClipboard(generateLink(campaign.id))}
+                                            onClick={() => copyToClipboard(generateLink(campaign))}
                                             className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
                                             title="Copy Link"
                                         >
                                             <Copy size={14} />
                                         </button>
                                         <button
-                                            onClick={() => window.open(generateLink(campaign.id), '_blank')}
+                                            onClick={() => window.open(generateLink(campaign), '_blank')}
                                             className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md transition-colors"
                                             title="Visit Link"
                                         >

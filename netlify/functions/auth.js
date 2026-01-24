@@ -3,11 +3,18 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getCorsHeaders, isValidEmail, safeJsonParse } from './utils/security.js';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET || JWT_SECRET === 'your-secret-key-change-in-production') {
-  throw new Error('JWT_SECRET environment variable must be set to a secure value in production');
-}
 const JWT_EXPIRES_IN = '7d';
+
+/**
+ * Get JWT_SECRET with proper error handling
+ */
+function getJwtSecret() {
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET || JWT_SECRET === 'your-secret-key-change-in-production') {
+    throw new Error('JWT_SECRET environment variable must be set to a secure value');
+  }
+  return JWT_SECRET;
+}
 
 /**
  * Netlify Serverless Function
@@ -31,6 +38,8 @@ export const handler = async (event, context) => {
   }
 
   try {
+    // Validate JWT_SECRET is set
+    const JWT_SECRET = getJwtSecret();
     const db = getDb();
     // Extract the action from the path (login, logout, verify)
     // Handle both direct function calls and redirects

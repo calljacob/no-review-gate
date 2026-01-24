@@ -60,28 +60,49 @@ export const handler = async (event, context) => {
     // GET - Fetch all campaigns (accessible to all authenticated users)
     if (event.httpMethod === 'GET') {
       try {
-        // Check if enabled column exists
+        // Check if enabled and campaign_type columns exist
         const [columnCheck] = await db`
-          SELECT EXISTS (
-            SELECT 1 
-            FROM information_schema.columns 
-            WHERE table_name = 'campaigns' 
-            AND column_name = 'enabled'
-          ) as column_exists
+          SELECT 
+            EXISTS (
+              SELECT 1 
+              FROM information_schema.columns 
+              WHERE table_name = 'campaigns' 
+              AND column_name = 'enabled'
+            ) as enabled_exists,
+            EXISTS (
+              SELECT 1 
+              FROM information_schema.columns 
+              WHERE table_name = 'campaigns' 
+              AND column_name = 'campaign_type'
+            ) as campaign_type_exists
         `;
 
         let campaigns;
-        if (columnCheck?.column_exists) {
-          // Column exists, include it in query
+        if (columnCheck?.enabled_exists && columnCheck?.campaign_type_exists) {
+          // Both columns exist, include them in query
           campaigns = await db`
-            SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
+            SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, campaign_type, created_at
+            FROM campaigns
+            ORDER BY created_at DESC
+          `;
+        } else if (columnCheck?.enabled_exists) {
+          // Only enabled exists
+          campaigns = await db`
+            SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, 'lead_docket' as campaign_type, created_at
+            FROM campaigns
+            ORDER BY created_at DESC
+          `;
+        } else if (columnCheck?.campaign_type_exists) {
+          // Only campaign_type exists
+          campaigns = await db`
+            SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, true as enabled, campaign_type, created_at
             FROM campaigns
             ORDER BY created_at DESC
           `;
         } else {
-          // Column doesn't exist, query without it (default enabled to true)
+          // Neither column exists, query without them (default values)
           campaigns = await db`
-            SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, true as enabled, created_at
+            SELECT id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, true as enabled, 'lead_docket' as campaign_type, created_at
             FROM campaigns
             ORDER BY created_at DESC
           `;
@@ -131,7 +152,8 @@ export const handler = async (event, context) => {
         logoUrl, 
         primaryColor, 
         secondaryColor, 
-        backgroundColor 
+        backgroundColor,
+        campaignType
       } = parseResult.data;
 
       // Validate campaign name
@@ -140,6 +162,16 @@ export const handler = async (event, context) => {
           statusCode: 400,
           headers,
           body: JSON.stringify({ error: 'Campaign name is required' }),
+        };
+      }
+
+      // Validate campaign type
+      const validCampaignType = campaignType === 'lead_docket' || campaignType === 'filevine';
+      if (!validCampaignType) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Campaign type must be either "lead_docket" or "filevine"' }),
         };
       }
 
@@ -178,19 +210,43 @@ export const handler = async (event, context) => {
         };
       }
 
-      // Check if enabled column exists before INSERT
+      // Check if enabled and campaign_type columns exist before INSERT
       const [columnCheck] = await db`
-        SELECT EXISTS (
-          SELECT 1 
-          FROM information_schema.columns 
-          WHERE table_name = 'campaigns' 
-          AND column_name = 'enabled'
-        ) as column_exists
+        SELECT 
+          EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_name = 'campaigns' 
+            AND column_name = 'enabled'
+          ) as enabled_exists,
+          EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_name = 'campaigns' 
+            AND column_name = 'campaign_type'
+          ) as campaign_type_exists
       `;
 
       let campaign;
-      if (columnCheck?.column_exists) {
-        // Column exists, include it in INSERT
+      if (columnCheck?.enabled_exists && columnCheck?.campaign_type_exists) {
+        // Both columns exist, include them in INSERT
+        [campaign] = await db`
+          INSERT INTO campaigns (name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, campaign_type)
+          VALUES (
+            ${name}, 
+            ${googleLink || null}, 
+            ${yelpLink || null}, 
+            ${logoUrl || null}, 
+            ${primaryColor || null}, 
+            ${secondaryColor || null}, 
+            ${backgroundColor || null},
+            true,
+            ${campaignType}
+          )
+          RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, campaign_type, created_at
+        `;
+      } else if (columnCheck?.enabled_exists) {
+        // Only enabled exists
         [campaign] = await db`
           INSERT INTO campaigns (name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled)
           VALUES (
@@ -205,8 +261,26 @@ export const handler = async (event, context) => {
           )
           RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, enabled, created_at
         `;
+        campaign = { ...campaign, campaign_type: campaignType };
+      } else if (columnCheck?.campaign_type_exists) {
+        // Only campaign_type exists
+        [campaign] = await db`
+          INSERT INTO campaigns (name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, campaign_type)
+          VALUES (
+            ${name}, 
+            ${googleLink || null}, 
+            ${yelpLink || null}, 
+            ${logoUrl || null}, 
+            ${primaryColor || null}, 
+            ${secondaryColor || null}, 
+            ${backgroundColor || null},
+            ${campaignType}
+          )
+          RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, campaign_type, created_at
+        `;
+        campaign = { ...campaign, enabled: true };
       } else {
-        // Column doesn't exist, INSERT without it
+        // Neither column exists
         [campaign] = await db`
           INSERT INTO campaigns (name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color)
           VALUES (
@@ -220,8 +294,7 @@ export const handler = async (event, context) => {
           )
           RETURNING id, name, google_link, yelp_link, logo_url, primary_color, secondary_color, background_color, created_at
         `;
-        // Add enabled as true to the response
-        campaign = { ...campaign, enabled: true };
+        campaign = { ...campaign, enabled: true, campaign_type: campaignType };
       }
 
       return {

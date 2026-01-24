@@ -25,6 +25,7 @@ const ReviewPage = () => {
     
     // Store query params in state to persist after URL cleanup
     const [leadId, setLeadId] = useState(null);
+    const [projectId, setProjectId] = useState(null);
     const [campaignId, setCampaignId] = useState(null);
 
     const [rating, setRating] = useState(0);
@@ -40,17 +41,21 @@ const ReviewPage = () => {
         if (paramsExtracted.current) return;
         
         const urlLeadId = searchParams.get('leadid');
+        const urlProjectId = searchParams.get('projectid');
         const urlCampaignId = searchParams.get('campaign');
         
         if (urlLeadId) {
             setLeadId(urlLeadId);
+        }
+        if (urlProjectId) {
+            setProjectId(urlProjectId);
         }
         if (urlCampaignId) {
             setCampaignId(urlCampaignId);
         }
         
         // Remove query strings from URL using replaceState
-        if (urlLeadId || urlCampaignId) {
+        if (urlLeadId || urlProjectId || urlCampaignId) {
             window.history.replaceState({}, '', '/review');
         }
         
@@ -86,7 +91,7 @@ const ReviewPage = () => {
     }, [campaignId]);
 
     const submitReview = async (ratingValue, feedback = null) => {
-        if (!leadId || !campaignId) {
+        if ((!leadId && !projectId) || !campaignId) {
             setError('Missing required information');
             return false;
         }
@@ -95,17 +100,26 @@ const ReviewPage = () => {
         setError(null);
 
         try {
+            const requestBody = {
+                campaignId: parseInt(campaignId),
+                rating: ratingValue,
+                feedback: feedback || null,
+            };
+
+            // Add the appropriate identifier based on which one is present
+            if (leadId) {
+                requestBody.leadId = leadId;
+            }
+            if (projectId) {
+                requestBody.projectId = projectId;
+            }
+
             const response = await fetch('/api/reviews', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    leadId,
-                    campaignId: parseInt(campaignId),
-                    rating: ratingValue,
-                    feedback: feedback || null,
-                }),
+                body: JSON.stringify(requestBody),
             });
 
             if (!response.ok) {
@@ -159,7 +173,7 @@ const ReviewPage = () => {
         // If it fails, error state is already set, user can try again
     };
 
-    if (!leadId) {
+    if (!leadId && !projectId) {
         return (
             <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-slate-950">
                 <div className="glass-panel p-6 sm:p-8 text-center max-w-md w-full">
@@ -231,10 +245,10 @@ const ReviewPage = () => {
 
                     {/* Footer */}
                     <div className="mt-4 sm:mt-6 md:mt-8 text-center space-y-2">
-                        {/* Small display of LeadID */}
-                        {leadId && (
+                        {/* Small display of identifier */}
+                        {(leadId || projectId) && (
                             <div className="text-slate-700 text-[10px] sm:text-xs font-mono">
-                                Lead ID: {leadId}
+                                {leadId ? `Lead ID: ${leadId}` : `Project ID: ${projectId}`}
                             </div>
                         )}
                         <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
@@ -301,10 +315,10 @@ const ReviewPage = () => {
 
                     {/* Footer */}
                     <div className="mt-4 sm:mt-6 md:mt-8 text-center space-y-2">
-                        {/* Small display of LeadID and Campaign */}
-                        {leadId && campaign && (
+                        {/* Small display of identifier and Campaign */}
+                        {(leadId || projectId) && campaign && (
                             <div className="text-slate-700 text-[10px] sm:text-xs font-mono">
-                                Lead ID: {leadId} | Campaign: {campaign.name}
+                                {leadId ? `Lead ID: ${leadId}` : `Project ID: ${projectId}`} | Campaign: {campaign.name}
                             </div>
                         )}
                         <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
@@ -468,10 +482,10 @@ const ReviewPage = () => {
 
                 {/* Footer */}
                 <div className="mt-4 sm:mt-6 md:mt-8 text-center space-y-2">
-                    {/* Small display of LeadID and Campaign */}
-                    {leadId && campaign && (
+                    {/* Small display of identifier and Campaign */}
+                    {(leadId || projectId) && campaign && (
                         <div className="text-slate-700 text-[10px] sm:text-xs font-mono">
-                            Lead ID: {leadId} | Campaign: {campaign.name}
+                            {leadId ? `Lead ID: ${leadId}` : `Project ID: ${projectId}`} | Campaign: {campaign.name}
                         </div>
                     )}
                     <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
