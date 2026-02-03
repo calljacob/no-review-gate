@@ -456,6 +456,7 @@ const ReviewPage = () => {
                                         leadId={leadId}
                                         projectId={projectId}
                                         agent={agent}
+                                        compact
                                     />
                                 </div>
                             </div>
