@@ -30,6 +30,7 @@ const ReviewPage = () => {
     const [agent, setAgent] = useState(null);
 
     const [rating, setRating] = useState(0);
+    const [reviewId, setReviewId] = useState(null);
     const [step, setStep] = useState('rating'); // rating, feedback, links, done
     const [campaign, setCampaign] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -136,6 +137,7 @@ const ReviewPage = () => {
             }
 
             const review = await response.json();
+            setReviewId(review?.id || null);
             console.log('Review submitted successfully:', review);
             return true;
         } catch (err) {
@@ -450,6 +452,7 @@ const ReviewPage = () => {
                                         googleLink={campaign.googleLink}
                                         yelpLink={campaign.yelpLink}
                                         campaignId={campaign.id}
+                                        reviewId={reviewId}
                                         leadId={leadId}
                                         projectId={projectId}
                                         agent={agent}
@@ -464,6 +467,7 @@ const ReviewPage = () => {
                                     googleLink={campaign.googleLink}
                                     yelpLink={campaign.yelpLink}
                                     campaignId={campaign.id}
+                                    reviewId={reviewId}
                                     leadId={leadId}
                                     projectId={projectId}
                                     agent={agent}

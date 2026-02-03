@@ -44,7 +44,7 @@ export const handler = async (event) => {
       };
     }
 
-    const { campaignId, leadId, projectId, agent, buttonType, targetUrl } = parseResult.data;
+    const { campaignId, reviewId, leadId, projectId, agent, buttonType, targetUrl } = parseResult.data;
 
     const campaignIdInt = parseInt(campaignId, 10);
     if (isNaN(campaignIdInt) || campaignIdInt <= 0) {
@@ -70,6 +70,18 @@ export const handler = async (event) => {
         headers,
         body: JSON.stringify({ error: 'A valid targetUrl is required' }),
       };
+    }
+
+    let reviewIdInt = null;
+    if (reviewId !== undefined && reviewId !== null && reviewId !== '') {
+      reviewIdInt = parseInt(reviewId, 10);
+      if (isNaN(reviewIdInt) || reviewIdInt <= 0) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Invalid review ID' }),
+        };
+      }
     }
 
     const leadValidation = validateTextLength(leadId, 255, 'Lead ID');
@@ -104,7 +116,13 @@ export const handler = async (event) => {
         SELECT 1
         FROM information_schema.tables
         WHERE table_name = 'link_clicks'
-      ) as table_exists
+      ) as table_exists,
+      EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'link_clicks'
+        AND column_name = 'review_id'
+      ) as review_id_exists
     `;
 
     if (!tableCheck?.table_exists) {
@@ -117,15 +135,58 @@ export const handler = async (event) => {
       };
     }
 
+    if (reviewIdInt && !tableCheck?.review_id_exists) {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({
+          error: 'review_id is missing on link_clicks. Run the latest link click migration.',
+        }),
+      };
+    }
+
     const forwardedFor = event.headers['x-forwarded-for'] || '';
     const ipAddress = forwardedFor.split(',')[0]?.trim() || null;
     const userAgent = event.headers['user-agent'] || null;
 
-    const [created] = await db`
-      INSERT INTO link_clicks (campaign_id, lead_id, project_id, agent, button_type, target_url, user_agent, ip_address)
-      VALUES (${campaignIdInt}, ${leadId || null}, ${projectId || null}, ${agent || null}, ${buttonType}, ${targetUrl}, ${userAgent}, ${ipAddress})
-      RETURNING id, campaign_id, button_type, target_url, created_at
-    `;
+    if (reviewIdInt) {
+      const [review] = await db`
+        SELECT id, campaign_id
+        FROM reviews
+        WHERE id = ${reviewIdInt}
+      `;
+
+      if (!review) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Review not found for provided reviewId' }),
+        };
+      }
+
+      if (review.campaign_id !== campaignIdInt) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'reviewId does not belong to the provided campaignId' }),
+        };
+      }
+    }
+
+    let created;
+    if (tableCheck?.review_id_exists) {
+      [created] = await db`
+        INSERT INTO link_clicks (campaign_id, review_id, lead_id, project_id, agent, button_type, target_url, user_agent, ip_address)
+        VALUES (${campaignIdInt}, ${reviewIdInt}, ${leadId || null}, ${projectId || null}, ${agent || null}, ${buttonType}, ${targetUrl}, ${userAgent}, ${ipAddress})
+        RETURNING id, campaign_id, review_id, button_type, target_url, created_at
+      `;
+    } else {
+      [created] = await db`
+        INSERT INTO link_clicks (campaign_id, lead_id, project_id, agent, button_type, target_url, user_agent, ip_address)
+        VALUES (${campaignIdInt}, ${leadId || null}, ${projectId || null}, ${agent || null}, ${buttonType}, ${targetUrl}, ${userAgent}, ${ipAddress})
+        RETURNING id, campaign_id, NULL::integer as review_id, button_type, target_url, created_at
+      `;
+    }
 
     return {
       statusCode: 201,

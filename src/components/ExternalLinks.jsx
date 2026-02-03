@@ -1,13 +1,14 @@
 import React from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
 
-const ExternalLinks = ({ googleLink, yelpLink, campaignId, leadId, projectId, agent }) => {
+const ExternalLinks = ({ googleLink, yelpLink, campaignId, leadId, projectId, agent, reviewId }) => {
     // Construct Google review URL from Place ID
     const googleReviewUrl = googleLink ? `https://search.google.com/local/writereview?placeid=${encodeURIComponent(googleLink)}` : null;
 
     const trackClick = (buttonType, targetUrl) => {
         const payload = {
             campaignId: campaignId ? parseInt(campaignId, 10) : null,
+            reviewId: reviewId ? parseInt(reviewId, 10) : null,
             leadId: leadId || null,
             projectId: projectId || null,
             agent: agent || null,
