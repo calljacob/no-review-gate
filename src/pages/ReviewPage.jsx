@@ -27,6 +27,7 @@ const ReviewPage = () => {
     const [leadId, setLeadId] = useState(null);
     const [projectId, setProjectId] = useState(null);
     const [campaignId, setCampaignId] = useState(null);
+    const [agent, setAgent] = useState(null);
 
     const [rating, setRating] = useState(0);
     const [step, setStep] = useState('rating'); // rating, feedback, links, done
@@ -43,6 +44,7 @@ const ReviewPage = () => {
         const urlLeadId = searchParams.get('leadid');
         const urlProjectId = searchParams.get('projectid');
         const urlCampaignId = searchParams.get('campaign');
+        const urlAgent = searchParams.get('agent');
         
         if (urlLeadId) {
             setLeadId(urlLeadId);
@@ -53,9 +55,12 @@ const ReviewPage = () => {
         if (urlCampaignId) {
             setCampaignId(urlCampaignId);
         }
+        if (urlAgent) {
+            setAgent(urlAgent);
+        }
         
         // Remove query strings from URL using replaceState
-        if (urlLeadId || urlProjectId || urlCampaignId) {
+        if (urlLeadId || urlProjectId || urlCampaignId || urlAgent) {
             window.history.replaceState({}, '', '/review');
         }
         
@@ -112,6 +117,9 @@ const ReviewPage = () => {
             }
             if (projectId) {
                 requestBody.projectId = projectId;
+            }
+            if (agent) {
+                requestBody.agent = agent;
             }
 
             const response = await fetch('/api/reviews', {

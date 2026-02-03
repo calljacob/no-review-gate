@@ -3,8 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=18.14.0 <21"
+  },
   "scripts": {
-    "dev": "netlify dev",
+    "dev": "env PATH=\"/opt/homebrew/opt/node@20/bin:$PATH\" netlify dev",
     "dev:vite": "vite",
     "build": "vite build",
     "lint": "eslint .",

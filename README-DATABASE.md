@@ -70,6 +70,7 @@ Use bcrypt to hash passwords (10 salt rounds recommended).
   ```json
   {
     "leadId": "12345",
+    "agent": "Jane Doe",
     "campaignId": "1",
     "rating": 5,
     "feedback": "Great service!"
@@ -142,4 +143,3 @@ If not set, a default secret is used (not recommended for production).
 - Authentication uses JWT tokens stored in HttpOnly cookies for security
 - The `/admin` route is protected and requires authentication
 - Users can change their password from the admin dashboard
-

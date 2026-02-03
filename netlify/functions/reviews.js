@@ -33,14 +33,21 @@ export const handler = async (event, context) => {
     if (event.httpMethod === 'GET') {
       const { campaignId, leadId, projectId } = event.queryStringParameters || {};
 
-      // Check if project_id column exists
+      // Check if optional columns exist
       const [columnCheck] = await db`
-        SELECT EXISTS (
-          SELECT 1 
-          FROM information_schema.columns 
-          WHERE table_name = 'reviews' 
-          AND column_name = 'project_id'
-        ) as project_id_exists
+        SELECT 
+          EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_name = 'reviews' 
+            AND column_name = 'project_id'
+          ) as project_id_exists,
+          EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_name = 'reviews' 
+            AND column_name = 'agent'
+          ) as agent_exists
       `;
 
       let reviews;
@@ -65,19 +72,37 @@ export const handler = async (event, context) => {
           }
           
           if (columnCheck?.project_id_exists) {
-            reviews = await db`
-              SELECT id, lead_id, project_id, campaign_id, rating, feedback, created_at
-              FROM reviews
-              WHERE campaign_id = ${campaignIdInt} AND lead_id = ${leadId}
-              ORDER BY created_at DESC
-            `;
+            if (columnCheck?.agent_exists) {
+              reviews = await db`
+                SELECT id, lead_id, project_id, agent, campaign_id, rating, feedback, created_at
+                FROM reviews
+                WHERE campaign_id = ${campaignIdInt} AND lead_id = ${leadId}
+                ORDER BY created_at DESC
+              `;
+            } else {
+              reviews = await db`
+                SELECT id, lead_id, project_id, campaign_id, rating, feedback, created_at
+                FROM reviews
+                WHERE campaign_id = ${campaignIdInt} AND lead_id = ${leadId}
+                ORDER BY created_at DESC
+              `;
+            }
           } else {
-            reviews = await db`
-              SELECT id, lead_id, campaign_id, rating, feedback, created_at
-              FROM reviews
-              WHERE campaign_id = ${campaignIdInt} AND lead_id = ${leadId}
-              ORDER BY created_at DESC
-            `;
+            if (columnCheck?.agent_exists) {
+              reviews = await db`
+                SELECT id, lead_id, agent, campaign_id, rating, feedback, created_at
+                FROM reviews
+                WHERE campaign_id = ${campaignIdInt} AND lead_id = ${leadId}
+                ORDER BY created_at DESC
+              `;
+            } else {
+              reviews = await db`
+                SELECT id, lead_id, campaign_id, rating, feedback, created_at
+                FROM reviews
+                WHERE campaign_id = ${campaignIdInt} AND lead_id = ${leadId}
+                ORDER BY created_at DESC
+              `;
+            }
           }
         } else if (projectId) {
           const projectIdValidation = validateTextLength(projectId, 255, 'Project ID');
@@ -90,12 +115,21 @@ export const handler = async (event, context) => {
           }
           
           if (columnCheck?.project_id_exists) {
-            reviews = await db`
-              SELECT id, lead_id, project_id, campaign_id, rating, feedback, created_at
-              FROM reviews
-              WHERE campaign_id = ${campaignIdInt} AND project_id = ${projectId}
-              ORDER BY created_at DESC
-            `;
+            if (columnCheck?.agent_exists) {
+              reviews = await db`
+                SELECT id, lead_id, project_id, agent, campaign_id, rating, feedback, created_at
+                FROM reviews
+                WHERE campaign_id = ${campaignIdInt} AND project_id = ${projectId}
+                ORDER BY created_at DESC
+              `;
+            } else {
+              reviews = await db`
+                SELECT id, lead_id, project_id, campaign_id, rating, feedback, created_at
+                FROM reviews
+                WHERE campaign_id = ${campaignIdInt} AND project_id = ${projectId}
+                ORDER BY created_at DESC
+              `;
+            }
           } else {
             return {
               statusCode: 400,
@@ -115,35 +149,71 @@ export const handler = async (event, context) => {
         }
         
         if (columnCheck?.project_id_exists) {
-          reviews = await db`
-            SELECT id, lead_id, project_id, campaign_id, rating, feedback, created_at
-            FROM reviews
-            WHERE campaign_id = ${campaignIdInt}
-            ORDER BY created_at DESC
-          `;
+          if (columnCheck?.agent_exists) {
+            reviews = await db`
+              SELECT id, lead_id, project_id, agent, campaign_id, rating, feedback, created_at
+              FROM reviews
+              WHERE campaign_id = ${campaignIdInt}
+              ORDER BY created_at DESC
+            `;
+          } else {
+            reviews = await db`
+              SELECT id, lead_id, project_id, campaign_id, rating, feedback, created_at
+              FROM reviews
+              WHERE campaign_id = ${campaignIdInt}
+              ORDER BY created_at DESC
+            `;
+          }
         } else {
-          reviews = await db`
-            SELECT id, lead_id, campaign_id, rating, feedback, created_at
-            FROM reviews
-            WHERE campaign_id = ${campaignIdInt}
-            ORDER BY created_at DESC
-          `;
+          if (columnCheck?.agent_exists) {
+            reviews = await db`
+              SELECT id, lead_id, agent, campaign_id, rating, feedback, created_at
+              FROM reviews
+              WHERE campaign_id = ${campaignIdInt}
+              ORDER BY created_at DESC
+            `;
+          } else {
+            reviews = await db`
+              SELECT id, lead_id, campaign_id, rating, feedback, created_at
+              FROM reviews
+              WHERE campaign_id = ${campaignIdInt}
+              ORDER BY created_at DESC
+            `;
+          }
         }
       } else {
         if (columnCheck?.project_id_exists) {
-          reviews = await db`
-            SELECT id, lead_id, project_id, campaign_id, rating, feedback, created_at
-            FROM reviews
-            ORDER BY created_at DESC
-            LIMIT 100
-          `;
+          if (columnCheck?.agent_exists) {
+            reviews = await db`
+              SELECT id, lead_id, project_id, agent, campaign_id, rating, feedback, created_at
+              FROM reviews
+              ORDER BY created_at DESC
+              LIMIT 100
+            `;
+          } else {
+            reviews = await db`
+              SELECT id, lead_id, project_id, campaign_id, rating, feedback, created_at
+              FROM reviews
+              ORDER BY created_at DESC
+              LIMIT 100
+            `;
+          }
         } else {
-          reviews = await db`
-            SELECT id, lead_id, campaign_id, rating, feedback, created_at
-            FROM reviews
-            ORDER BY created_at DESC
-            LIMIT 100
-          `;
+          if (columnCheck?.agent_exists) {
+            reviews = await db`
+              SELECT id, lead_id, agent, campaign_id, rating, feedback, created_at
+              FROM reviews
+              ORDER BY created_at DESC
+              LIMIT 100
+            `;
+          } else {
+            reviews = await db`
+              SELECT id, lead_id, campaign_id, rating, feedback, created_at
+              FROM reviews
+              ORDER BY created_at DESC
+              LIMIT 100
+            `;
+          }
         }
       }
 
@@ -166,7 +236,7 @@ export const handler = async (event, context) => {
         };
       }
 
-      const { leadId, projectId, campaignId, rating, feedback } = parseResult.data;
+      const { leadId, projectId, campaignId, rating, feedback, agent } = parseResult.data;
 
       // Validate inputs
       const campaignIdInt = parseInt(campaignId, 10);
@@ -201,14 +271,21 @@ export const handler = async (event, context) => {
         };
       }
 
-      // Check if project_id column exists
+      // Check if optional columns exist
       const [columnCheck] = await db`
-        SELECT EXISTS (
-          SELECT 1 
-          FROM information_schema.columns 
-          WHERE table_name = 'reviews' 
-          AND column_name = 'project_id'
-        ) as project_id_exists
+        SELECT 
+          EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_name = 'reviews' 
+            AND column_name = 'project_id'
+          ) as project_id_exists,
+          EXISTS (
+            SELECT 1 
+            FROM information_schema.columns 
+            WHERE table_name = 'reviews' 
+            AND column_name = 'agent'
+          ) as agent_exists
       `;
 
       // Determine which identifier to use based on campaign type
@@ -280,14 +357,37 @@ export const handler = async (event, context) => {
         };
       }
 
+      const agentValidation = validateTextLength(agent, 255, 'Agent');
+      if (!agentValidation.valid) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: agentValidation.error }),
+        };
+      }
+
+      const safeAgent = agent || null;
+
       let review;
       if (identifierField === 'lead_id') {
         // Insert with lead_id (project_id will be null)
-        if (columnCheck?.project_id_exists) {
+        if (columnCheck?.project_id_exists && columnCheck?.agent_exists) {
+          [review] = await db`
+            INSERT INTO reviews (lead_id, project_id, agent, campaign_id, rating, feedback, created_at)
+            VALUES (${identifierValue}, NULL, ${safeAgent}, ${campaignIdInt}, ${ratingInt}, ${feedback || null}, NOW())
+            RETURNING id, lead_id, project_id, agent, campaign_id, rating, feedback, created_at
+          `;
+        } else if (columnCheck?.project_id_exists) {
           [review] = await db`
             INSERT INTO reviews (lead_id, project_id, campaign_id, rating, feedback, created_at)
             VALUES (${identifierValue}, NULL, ${campaignIdInt}, ${ratingInt}, ${feedback || null}, NOW())
             RETURNING id, lead_id, project_id, campaign_id, rating, feedback, created_at
+          `;
+        } else if (columnCheck?.agent_exists) {
+          [review] = await db`
+            INSERT INTO reviews (lead_id, agent, campaign_id, rating, feedback, created_at)
+            VALUES (${identifierValue}, ${safeAgent}, ${campaignIdInt}, ${ratingInt}, ${feedback || null}, NOW())
+            RETURNING id, lead_id, agent, campaign_id, rating, feedback, created_at
           `;
         } else {
           [review] = await db`
@@ -298,11 +398,19 @@ export const handler = async (event, context) => {
         }
       } else {
         // Insert with project_id (lead_id will be null)
-        [review] = await db`
-          INSERT INTO reviews (lead_id, project_id, campaign_id, rating, feedback, created_at)
-          VALUES (NULL, ${identifierValue}, ${campaignIdInt}, ${ratingInt}, ${feedback || null}, NOW())
-          RETURNING id, lead_id, project_id, campaign_id, rating, feedback, created_at
-        `;
+        if (columnCheck?.agent_exists) {
+          [review] = await db`
+            INSERT INTO reviews (lead_id, project_id, agent, campaign_id, rating, feedback, created_at)
+            VALUES (NULL, ${identifierValue}, ${safeAgent}, ${campaignIdInt}, ${ratingInt}, ${feedback || null}, NOW())
+            RETURNING id, lead_id, project_id, agent, campaign_id, rating, feedback, created_at
+          `;
+        } else {
+          [review] = await db`
+            INSERT INTO reviews (lead_id, project_id, campaign_id, rating, feedback, created_at)
+            VALUES (NULL, ${identifierValue}, ${campaignIdInt}, ${ratingInt}, ${feedback || null}, NOW())
+            RETURNING id, lead_id, project_id, campaign_id, rating, feedback, created_at
+          `;
+        }
       }
 
       return {
@@ -326,4 +434,3 @@ export const handler = async (event, context) => {
     };
   }
 };
-

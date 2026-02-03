@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Copy, ExternalLink, Trash2, LayoutDashboard, Link as LinkIcon, LogOut, KeyRound, User as UserIcon, Upload, X, Star, Pencil, Users, Shield, Mail, Power, PowerOff, HelpCircle } from 'lucide-react';
+import AppNavigation from '../components/AppNavigation';
 
 // Helper function to convert API response (snake_case) to frontend format (camelCase)
 const toCamelCase = (apiCampaign) => ({
@@ -390,7 +391,7 @@ const AdminDashboard = () => {
             return `${baseUrl}/review?projectid={projectid}&campaign=${campaignId}`;
         } else {
             // Default to lead_docket
-            return `${baseUrl}/review?leadid={{LeadId}}&campaign=${campaignId}`;
+            return `${baseUrl}/review?leadid={{LeadId}}&agent={{IntakeFullName}}&campaign=${campaignId}`;
         }
     };
 
@@ -569,6 +570,10 @@ const AdminDashboard = () => {
     return (
         <div className="min-h-screen bg-slate-950 p-3 sm:p-4 md:p-6 lg:p-8 xl:p-12">
             <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 md:space-y-8">
+                <AppNavigation
+                    userRole={user?.role}
+                    currentLabel={activeTab === 'users' ? 'User Management' : null}
+                />
 
                 {/* Header */}
                 <div className="space-y-4">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, KeyRound, User, Star, Search, Filter, X, ChevronUp, ChevronDown } from 'lucide-react';
 import StarRating from '../components/StarRating';
+import AppNavigation from '../components/AppNavigation';
 
 const ReviewsOnlyDashboard = () => {
     const navigate = useNavigate();
@@ -77,6 +78,7 @@ const ReviewsOnlyDashboard = () => {
                     id: review.id,
                     leadId: review.lead_id || null,
                     projectId: review.project_id || null,
+                    agent: review.agent || null,
                     campaignId: review.campaign_id,
                     rating: review.rating,
                     feedback: review.feedback || '',
@@ -115,7 +117,8 @@ const ReviewsOnlyDashboard = () => {
             filtered = filtered.filter(review => 
                 review.feedback.toLowerCase().includes(query) ||
                 (review.leadId && review.leadId.toString().toLowerCase().includes(query)) ||
-                (review.projectId && review.projectId.toString().toLowerCase().includes(query))
+                (review.projectId && review.projectId.toString().toLowerCase().includes(query)) ||
+                (review.agent && review.agent.toLowerCase().includes(query))
             );
         }
 
@@ -261,6 +264,8 @@ const ReviewsOnlyDashboard = () => {
     return (
         <div className="min-h-screen bg-slate-950 p-6 md:p-12">
             <div className="max-w-7xl mx-auto space-y-6">
+                <AppNavigation userRole={user?.role} />
+
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="space-y-1">
@@ -386,7 +391,7 @@ const ReviewsOnlyDashboard = () => {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Search by feedback, Lead ID, or Project ID..."
+                                    placeholder="Search by feedback, Lead ID, Project ID, or agent..."
                                     className="input-field pl-10"
                                 />
                             </div>
@@ -470,7 +475,9 @@ const ReviewsOnlyDashboard = () => {
                                                 {getCampaignName(review.campaignId)}
                                             </td>
                                             <td className="px-6 py-4 text-sm text-slate-300 font-mono">
-                                                {review.leadId ? `Lead ID: ${review.leadId}` : review.projectId ? `Project ID: ${review.projectId}` : 'N/A'}
+                                                {review.leadId
+                                                    ? `Lead ID: ${review.leadId}${review.agent ? ` | Agent: ${review.agent}` : ''}`
+                                                    : review.projectId ? `Project ID: ${review.projectId}` : 'N/A'}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
@@ -583,4 +590,3 @@ const ReviewsOnlyDashboard = () => {
 };
 
 export default ReviewsOnlyDashboard;
-

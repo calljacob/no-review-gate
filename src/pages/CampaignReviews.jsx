@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Filter, X, ChevronUp, ChevronDown, Search, Star } from 'lucide-react';
 import StarRating from '../components/StarRating';
+import AppNavigation from '../components/AppNavigation';
 
 const CampaignReviews = () => {
     const navigate = useNavigate();
@@ -44,6 +45,7 @@ const CampaignReviews = () => {
                     id: review.id,
                     leadId: review.lead_id || null,
                     projectId: review.project_id || null,
+                    agent: review.agent || null,
                     campaignId: review.campaign_id,
                     rating: review.rating,
                     feedback: review.feedback || '',
@@ -79,7 +81,8 @@ const CampaignReviews = () => {
             filtered = filtered.filter(review => 
                 review.feedback.toLowerCase().includes(query) ||
                 (review.leadId && review.leadId.toString().toLowerCase().includes(query)) ||
-                (review.projectId && review.projectId.toString().toLowerCase().includes(query))
+                (review.projectId && review.projectId.toString().toLowerCase().includes(query)) ||
+                (review.agent && review.agent.toLowerCase().includes(query))
             );
         }
 
@@ -158,6 +161,8 @@ const CampaignReviews = () => {
     return (
         <div className="min-h-screen bg-slate-950 p-6 md:p-12">
             <div className="max-w-7xl mx-auto space-y-6">
+                <AppNavigation userRole="admin" currentLabel="Campaign Reviews" />
+
                 {/* Header */}
                 <div className="flex items-center gap-4">
                     <button
@@ -234,7 +239,7 @@ const CampaignReviews = () => {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Search by feedback, Lead ID, or Project ID..."
+                                    placeholder="Search by feedback, Lead ID, Project ID, or agent..."
                                     className="input-field pl-10"
                                 />
                             </div>
@@ -312,7 +317,9 @@ const CampaignReviews = () => {
                                                 {formatDate(review.createdAt)}
                                             </td>
                                             <td className="px-6 py-4 text-sm text-slate-300 font-mono">
-                                                {review.leadId ? `Lead ID: ${review.leadId}` : review.projectId ? `Project ID: ${review.projectId}` : 'N/A'}
+                                                {review.leadId 
+                                                    ? `Lead ID: ${review.leadId}${review.agent ? ` | Agent: ${review.agent}` : ''}`
+                                                    : review.projectId ? `Project ID: ${review.projectId}` : 'N/A'}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
@@ -347,4 +354,3 @@ const CampaignReviews = () => {
 };
 
 export default CampaignReviews;
-

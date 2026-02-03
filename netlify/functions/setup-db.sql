@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS reviews (
   id SERIAL PRIMARY KEY,
   lead_id VARCHAR(255) NOT NULL,
+  agent VARCHAR(255),
   campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
   rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
   feedback TEXT,
@@ -52,4 +53,3 @@ SELECT
 FROM campaigns c
 LEFT JOIN reviews r ON c.id = r.campaign_id
 GROUP BY c.id, c.name;
-
