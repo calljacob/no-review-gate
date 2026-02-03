@@ -1,5 +1,30 @@
 import { getDb } from './utils/db.js';
 import { safeJsonParse, validateTextLength, isValidUrl } from './utils/security.js';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'your-secret-key-change-in-production') {
+  throw new Error('JWT_SECRET environment variable must be set to a secure value in production');
+}
+
+function verifyAuthenticated(event) {
+  const cookies = event.headers.cookie || '';
+  const cookieToken = cookies.split(';').find(c => c.trim().startsWith('token='));
+  const token = cookieToken
+    ? cookieToken.split('=')[1]
+    : event.headers.authorization?.replace('Bearer ', '');
+
+  if (!token) {
+    return { authenticated: false, error: 'Authentication required' };
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return { authenticated: true, userId: decoded.userId, role: decoded.role };
+  } catch {
+    return { authenticated: false, error: 'Invalid or expired token' };
+  }
+}
 
 /**
  * Netlify Serverless Function
@@ -12,7 +37,7 @@ export const handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Content-Type': 'application/json',
   };
 
@@ -22,6 +47,103 @@ export const handler = async (event) => {
       headers,
       body: '',
     };
+  }
+
+  if (event.httpMethod === 'GET') {
+    try {
+      const auth = verifyAuthenticated(event);
+      if (!auth.authenticated) {
+        return {
+          statusCode: 401,
+          headers,
+          body: JSON.stringify({ error: auth.error }),
+        };
+      }
+
+      const db = getDb();
+      const campaignId = event.queryStringParameters?.campaignId;
+      const campaignIdInt = campaignId ? parseInt(campaignId, 10) : null;
+
+      if (campaignId && (isNaN(campaignIdInt) || campaignIdInt <= 0)) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Invalid campaign ID' }),
+        };
+      }
+
+      const [tableCheck] = await db`
+        SELECT EXISTS (
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_name = 'link_clicks'
+        ) as table_exists,
+        EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_name = 'link_clicks'
+          AND column_name = 'review_id'
+        ) as review_id_exists
+      `;
+
+      if (!tableCheck?.table_exists) {
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify([]),
+        };
+      }
+
+      let clicks;
+      if (tableCheck?.review_id_exists) {
+        if (campaignIdInt) {
+          clicks = await db`
+            SELECT id, campaign_id, review_id, lead_id, project_id, agent, button_type, target_url, created_at
+            FROM link_clicks
+            WHERE campaign_id = ${campaignIdInt}
+            ORDER BY created_at DESC
+            LIMIT 10000
+          `;
+        } else {
+          clicks = await db`
+            SELECT id, campaign_id, review_id, lead_id, project_id, agent, button_type, target_url, created_at
+            FROM link_clicks
+            ORDER BY created_at DESC
+            LIMIT 10000
+          `;
+        }
+      } else {
+        if (campaignIdInt) {
+          clicks = await db`
+            SELECT id, campaign_id, NULL::integer as review_id, lead_id, project_id, agent, button_type, target_url, created_at
+            FROM link_clicks
+            WHERE campaign_id = ${campaignIdInt}
+            ORDER BY created_at DESC
+            LIMIT 10000
+          `;
+        } else {
+          clicks = await db`
+            SELECT id, campaign_id, NULL::integer as review_id, lead_id, project_id, agent, button_type, target_url, created_at
+            FROM link_clicks
+            ORDER BY created_at DESC
+            LIMIT 10000
+          `;
+        }
+      }
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(clicks),
+      };
+    } catch (error) {
+      console.error('Error fetching link clicks:', error);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Failed to fetch link clicks' }),
+      };
+    }
   }
 
   if (event.httpMethod !== 'POST') {

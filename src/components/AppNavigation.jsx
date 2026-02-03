@@ -1,10 +1,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { ChevronRight, LayoutDashboard, Star } from 'lucide-react';
+import { BarChart3, ChevronRight, LayoutDashboard, Star } from 'lucide-react';
 
 const navigationItems = [
     { to: '/admin', label: 'Campaigns', icon: LayoutDashboard, adminOnly: true },
     { to: '/reviews', label: 'All Reviews', icon: Star, adminOnly: false },
+    { to: '/link-stats', label: 'Link Stats', icon: BarChart3, adminOnly: false },
 ];
 
 const AppNavigation = ({ userRole, currentLabel = null }) => {

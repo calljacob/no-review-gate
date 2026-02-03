@@ -79,6 +79,7 @@ Use bcrypt to hash passwords (10 salt rounds recommended).
 
 ### Link Click Tracking
 
+- `GET /api/link-clicks` - Fetch tracked click events (supports optional `campaignId`)
 - `POST /api/link-clicks` - Track outbound Google/Yelp button clicks
   ```json
   {

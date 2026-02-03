@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import ReviewPage from './pages/ReviewPage';
 import AdminDashboard from './pages/AdminDashboard';
 import ReviewsOnlyDashboard from './pages/ReviewsOnlyDashboard';
+import LinkStatsDashboard from './pages/LinkStatsDashboard';
 import LoginPage from './pages/LoginPage';
 import CampaignReviews from './pages/CampaignReviews';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -38,6 +39,14 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route 
+          path="/link-stats" 
+          element={
+            <ProtectedRoute>
+              <LinkStatsDashboard />
+            </ProtectedRoute>
+          } 
+        />
         <Route path="/" element={<Navigate to="/reviews" replace />} />
       </Routes>
     </Router>
@@ -45,4 +54,3 @@ function App() {
 }
 
 export default App;
-
