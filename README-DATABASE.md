@@ -77,6 +77,20 @@ Use bcrypt to hash passwords (10 salt rounds recommended).
   }
   ```
 
+### Link Click Tracking
+
+- `POST /api/link-clicks` - Track outbound Google/Yelp button clicks
+  ```json
+  {
+    "campaignId": 1,
+    "leadId": "12345",
+    "projectId": "abc123",
+    "agent": "Jane Doe",
+    "buttonType": "google",
+    "targetUrl": "https://search.google.com/local/writereview?placeid=..."
+  }
+  ```
+
 ### Authentication
 
 - `POST /api/auth/login` - Login with email and password

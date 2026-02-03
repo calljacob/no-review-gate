@@ -259,9 +259,6 @@ const ReviewPage = () => {
                                 {leadId ? `Lead ID: ${leadId}` : `Project ID: ${projectId}`}
                             </div>
                         )}
-                        <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
-                            Designed & Developed by Alberto Martinez Jr
-                        </p>
                     </div>
                 </div>
             </div>
@@ -329,9 +326,6 @@ const ReviewPage = () => {
                                 {leadId ? `Lead ID: ${leadId}` : `Project ID: ${projectId}`} | Campaign: {campaign.name}
                             </div>
                         )}
-                        <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
-                            Designed & Developed by Alberto Martinez Jr
-                        </p>
                     </div>
                 </div>
             </div>
@@ -455,6 +449,10 @@ const ReviewPage = () => {
                                     <ExternalLinks
                                         googleLink={campaign.googleLink}
                                         yelpLink={campaign.yelpLink}
+                                        campaignId={campaign.id}
+                                        leadId={leadId}
+                                        projectId={projectId}
+                                        agent={agent}
                                     />
                                 </div>
                             </div>
@@ -465,6 +463,10 @@ const ReviewPage = () => {
                                 <ExternalLinks
                                     googleLink={campaign.googleLink}
                                     yelpLink={campaign.yelpLink}
+                                    campaignId={campaign.id}
+                                    leadId={leadId}
+                                    projectId={projectId}
+                                    agent={agent}
                                 />
                             </div>
                         )}
@@ -496,9 +498,6 @@ const ReviewPage = () => {
                             {leadId ? `Lead ID: ${leadId}` : `Project ID: ${projectId}`} | Campaign: {campaign.name}
                         </div>
                     )}
-                    <p className="text-slate-600 text-xs sm:text-sm font-medium tracking-wide uppercase">
-                        Designed & Developed by Alberto Martinez Jr
-                    </p>
                 </div>
             </div>
         </div>

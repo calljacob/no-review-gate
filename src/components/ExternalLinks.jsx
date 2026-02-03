@@ -1,9 +1,39 @@
 import React from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
 
-const ExternalLinks = ({ googleLink, yelpLink }) => {
+const ExternalLinks = ({ googleLink, yelpLink, campaignId, leadId, projectId, agent }) => {
     // Construct Google review URL from Place ID
     const googleReviewUrl = googleLink ? `https://search.google.com/local/writereview?placeid=${encodeURIComponent(googleLink)}` : null;
+
+    const trackClick = (buttonType, targetUrl) => {
+        const payload = {
+            campaignId: campaignId ? parseInt(campaignId, 10) : null,
+            leadId: leadId || null,
+            projectId: projectId || null,
+            agent: agent || null,
+            buttonType,
+            targetUrl
+        };
+
+        if (!payload.campaignId) return;
+
+        const body = JSON.stringify(payload);
+
+        if (navigator.sendBeacon) {
+            const blob = new Blob([body], { type: 'application/json' });
+            navigator.sendBeacon('/api/link-clicks', blob);
+            return;
+        }
+
+        fetch('/api/link-clicks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+            keepalive: true
+        }).catch((err) => {
+            console.error('Failed to track link click:', err);
+        });
+    };
     
     return (
         <div className="w-full animate-fade-in">
@@ -13,14 +43,15 @@ const ExternalLinks = ({ googleLink, yelpLink }) => {
                         href={googleReviewUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 bg-[#4285F4] text-white rounded-xl 
-            hover:bg-[#357AE8] transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 group"
+                        onClick={() => trackClick('google', googleReviewUrl)}
+                        className="flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 bg-[#174EA6] text-white rounded-xl border border-white/20
+            hover:bg-[#123B80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 group"
                     >
                         <div className="p-1.5 sm:p-2 bg-white/20 rounded-full">
                             <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                         </div>
                         <span className="font-bold text-base sm:text-lg">Google</span>
-                        <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 opacity-70 group-hover:opacity-100 transition-opacity ml-auto" />
+                        <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 opacity-90 group-hover:opacity-100 transition-opacity ml-auto" />
                     </a>
                 )}
 
@@ -29,8 +60,9 @@ const ExternalLinks = ({ googleLink, yelpLink }) => {
                         href={yelpLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 bg-[#FF1A1A] text-white rounded-xl 
-            hover:bg-[#E60000] transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 group"
+                        onClick={() => trackClick('yelp', yelpLink)}
+                        className="flex items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 bg-[#B91C1C] text-white rounded-xl border border-white/20
+            hover:bg-[#991B1B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 group"
                     >
                         <div className="p-1.5 sm:p-2 bg-white/20 rounded-full">
                             <svg className="w-5 h-5 sm:w-6 sm:h-6 fill-current" viewBox="0 0 24 24">
@@ -38,7 +70,7 @@ const ExternalLinks = ({ googleLink, yelpLink }) => {
                             </svg>
                         </div>
                         <span className="font-bold text-base sm:text-lg">Yelp</span>
-                        <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 opacity-70 group-hover:opacity-100 transition-opacity ml-auto" />
+                        <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 opacity-90 group-hover:opacity-100 transition-opacity ml-auto" />
                     </a>
                 )}
             </div>

@@ -26,6 +26,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/link-clicks"
+  to = "/.netlify/functions/link-clicks"
+  status = 200
+
+[[redirects]]
   from = "/api/auth/login"
   to = "/.netlify/functions/auth?action=login"
   status = 200
@@ -70,4 +75,3 @@
   from = "/*"
   to = "/index.html"
   status = 200
-
