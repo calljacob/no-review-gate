@@ -294,6 +294,9 @@ const CampaignReviews = () => {
                                             </button>
                                         </th>
                                         <th className="px-6 py-4 text-left">
+                                            <span className="text-sm font-semibold text-slate-300">Agent</span>
+                                        </th>
+                                        <th className="px-6 py-4 text-left">
                                             <button
                                                 onClick={() => handleSort('rating')}
                                                 className="flex items-center gap-2 text-sm font-semibold text-slate-300 hover:text-white transition-colors"
@@ -317,9 +320,19 @@ const CampaignReviews = () => {
                                                 {formatDate(review.createdAt)}
                                             </td>
                                             <td className="px-6 py-4 text-sm text-slate-300 font-mono">
-                                                {review.leadId 
-                                                    ? `Lead ID: ${review.leadId}${review.agent ? ` | Agent: ${review.agent}` : ''}`
-                                                    : review.projectId ? `Project ID: ${review.projectId}` : 'N/A'}
+                                                {review.leadId ? (
+                                                    <a
+                                                        href={`https://calljacob.leaddocket.com/leads/edit/${encodeURIComponent(review.leadId)}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-indigo-400 hover:text-indigo-300 hover:underline"
+                                                    >
+                                                        {`Lead ID: ${review.leadId}`}
+                                                    </a>
+                                                ) : review.projectId ? `Project ID: ${review.projectId}` : 'N/A'}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-slate-300">
+                                                {review.agent || <span className="text-slate-500 italic">N/A</span>}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2">
